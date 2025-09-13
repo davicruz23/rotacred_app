@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:rotacred_app/model/charging.dart';
 import '../env/environment.dart';
 
 class ChargingService {
@@ -24,4 +25,21 @@ class ChargingService {
       throw Exception('Erro ao enviar carregamento: ${response.body}');
     }
   }
+
+  Future<List<Charging>> getChargings() async {
+  final response = await http.get(Uri.parse('$baseUrl/charging/all'));
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    print('retornou isso: $data');
+    if (data == null) return [];
+
+    return (data as List)
+        .map((e) => Charging.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } else {
+    throw Exception('Erro ao buscar carregamentos: ${response.statusCode}');
+  }
+}
+
 }
