@@ -3,18 +3,10 @@ class PreSaleItem {
   final int productId;
   final int quantity;
 
-  PreSaleItem({
-    this.id,
-    required this.productId,
-    required this.quantity,
-  });
+  PreSaleItem({this.id, required this.productId, required this.quantity});
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id ?? 0,
-      'productId': productId,
-      'quantity': quantity,
-    };
+    return {'id': id ?? 0, 'productId': productId, 'quantity': quantity};
   }
 
   factory PreSaleItem.fromJson(Map<String, dynamic> json) {

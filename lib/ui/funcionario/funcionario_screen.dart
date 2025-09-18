@@ -25,7 +25,13 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
   Widget build(BuildContext context) {
     final tabs = [
       AddChargingTab(user: widget.user),
-      ListChargingsTab(user: widget.user),
+      ListChargingsTab(
+        user: widget.user,
+        onChargingSelected: (charging) {
+          // Aqui você pode navegar para ProductsTab ou pré-venda
+          print('Carregamento selecionado: ${charging.description}');
+        },
+      ),
       ProductsTab(user: widget.user),
     ];
 
@@ -36,10 +42,7 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
         currentIndex: _selectedIndex,
         onTap: _onTabSelected,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Adicionar',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Adicionar'),
           BottomNavigationBarItem(
             icon: Icon(Icons.list),
             label: 'Carregamentos',

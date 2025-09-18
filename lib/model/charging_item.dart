@@ -1,39 +1,28 @@
-import 'charging.dart';
-import 'product.dart';
-import 'pre_sale.dart';
-
 class ChargingItem {
-  final int? id;
-  final Charging? charging;
-  final Product product;
+  final int id;
+  final int productId;
+  final int chargingId;
   final int quantity;
-  final PreSale? preSale;
+  final String nameProduct;
+  final String brand;
 
   ChargingItem({
-    this.id,
-    this.charging,
-    required this.product,
+    required this.id,
+    required this.productId,
+    required this.chargingId,
     required this.quantity,
-    this.preSale,
+    required this.nameProduct,
+    required this.brand
   });
 
   factory ChargingItem.fromJson(Map<String, dynamic> json) {
     return ChargingItem(
-      id: json['id'],
-      charging: json['charging'] != null ? Charging.fromJson(json['charging']) : null,
-      product: Product.fromJson(json['product']),
-      quantity: json['quantity'],
-      preSale: json['preSale'] != null ? PreSale.fromJson(json['preSale']) : null,
+      id: json['id'] ?? 0,
+      productId: json['productId'] ?? 0,
+      chargingId: json['chargingId'] ?? 0,
+      quantity: json['quantity'] ?? 0,
+      nameProduct: json['nameProduct'] ?? "",
+      brand: json['brand'] ?? ""
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      if (charging != null) 'charging': charging!.toJson(),
-      'product': product.toJson(),
-      'quantity': quantity,
-      if (preSale != null) 'preSale': preSale!.toJson(),
-    };
   }
 }

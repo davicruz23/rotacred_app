@@ -27,19 +27,28 @@ class ChargingService {
   }
 
   Future<List<Charging>> getChargings() async {
-  final response = await http.get(Uri.parse('$baseUrl/charging/all'));
+    final response = await http.get(Uri.parse('$baseUrl/charging/all'));
 
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    print('retornou isso: $data');
-    if (data == null) return [];
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print('retornou isso: $data');
+      if (data == null) return [];
 
-    return (data as List)
-        .map((e) => Charging.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } else {
-    throw Exception('Erro ao buscar carregamentos: ${response.statusCode}');
+      return (data as List)
+          .map((e) => Charging.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('Erro ao buscar carregamentos: ${response.statusCode}');
+    }
   }
-}
 
+  Future<Charging> getChargingById(int id) async {
+    final response = await http.get(Uri.parse("$baseUrl/$id"));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return Charging.fromJson(data);
+    } else {
+      throw Exception("Erro ao carregar carregamento $id");
+    }
+  }
 }

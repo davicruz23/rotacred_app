@@ -1,43 +1,45 @@
 import 'charging_item.dart';
-import 'user.dart';
 
 class Charging {
-  final int? id;
-  final String? description;
-  final DateTime? date;
-  final User? user;
-  final List<ChargingItem> items;
+  final int id;
+  final String chargingDate;
+  final String userName;
+  final String description;
+  final String data;
+  final List<ChargingItem> chargingItems;
 
   Charging({
-    this.id,
-    this.description,
-    this.date,
-    this.user,
-    required this.items,
+    required this.id,
+    required this.chargingDate,
+    required this.userName,
+    required this.description,
+    required this.data,
+    required this.chargingItems,
   });
 
   factory Charging.fromJson(Map<String, dynamic> json) {
-  return Charging(
-    id: json['id'],
-    description: json['description'], // null seguro
-    date: json['data'] != null? DateTime.parse(json['data']).toLocal() : null,
-    user: json['user'] != null ? User.fromJson(json['user']) : null,
-    items: json['items'] != null
-        ? (json['items'] as List)
-            .map((e) => ChargingItem.fromJson(e))
-            .toList()
-        : [],
-  );
+    return Charging(
+      id: json['id'] ?? 0,
+      chargingDate: json['chargingDate'] ?? '',
+      userName: json['userName'] ?? '',
+      description: json['description'] ?? '',
+      data: json['data'] ?? '',
+      chargingItems: (json['chargingItems'] as List<dynamic>?)
+              ?.map((e) => ChargingItem.fromJson(e))
+              .toList() ??
+          [],
+    );
+  }
+
+  factory Charging.empty() {
+    return Charging(
+      id: 0,
+      chargingDate: '',
+      userName: '',
+      description: '',
+      data: '',
+      chargingItems: [],
+    );
+  }
 }
 
-Map<String, dynamic> toJson() {
-  return {
-    if (id != null) 'id': id,
-    if (description != null) 'description': description,
-    if (date != null) 'created_at': date!.toIso8601String(),
-    if (user != null) 'user': user!.toJson(),
-    'items': items.map((e) => e.toJson()).toList(),
-  };
-}
-
-}

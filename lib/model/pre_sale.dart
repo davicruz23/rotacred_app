@@ -31,14 +31,14 @@ class PreSale {
 
   factory PreSale.fromJson(Map<String, dynamic> json) {
     return PreSale(
-      id: json['id'],
+      id: json['id'] ?? 0, // garante que não vai ser null
       preSaleDate: DateTime.parse(json['preSaleDate']),
-      sellerId: json['sellerId'],
+      sellerId: json['seller']?['id'] ?? 0, // agora pega do objeto seller
       client: Client.fromJson(json['client']),
-      products: (json['products'] as List)
-          .map((e) => PreSaleItem.fromJson(e))
+      products: (json['products'] ?? json['items'] ?? [])
+          .map<PreSaleItem>((e) => PreSaleItem.fromJson(e))
           .toList(),
-      chargingId: json['chargingId'],
+      chargingId: json['chargingId'] ?? 0,
     );
   }
 }

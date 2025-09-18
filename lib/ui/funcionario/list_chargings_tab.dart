@@ -5,7 +5,13 @@ import '../../model/user.dart';
 
 class ListChargingsTab extends StatefulWidget {
   final User user;
-  const ListChargingsTab({super.key, required this.user});
+  final Function(Charging) onChargingSelected; // callback quando escolher o carregamento
+
+  const ListChargingsTab({
+    super.key,
+    required this.user,
+    required this.onChargingSelected,
+  });
 
   @override
   State<ListChargingsTab> createState() => _ListChargingsTabState();
@@ -35,18 +41,29 @@ class _ListChargingsTabState extends State<ListChargingsTab> {
         }
 
         final chargings = snapshot.data!;
-        return ListView.builder(
-          itemCount: chargings.length,
-          itemBuilder: (context, index) {
-            final charging = chargings[index];
-            return ListTile(
+        return ListView(
+          children: chargings.map((charging) {
+            return ExpansionTile(
               title: Text(charging.description ?? 'Sem descrição'),
               subtitle: Text(
-                'Data: ${charging.date != null ? "${charging.date!.day}/${charging.date!.month}/${charging.date!.year}" : 'Sem data'}',
+                'Data: ${charging.chargingDate}/ - Total itens: ${charging.chargingItems.length}',
               ),
-              trailing: Text('${charging.items.length} itens'),
+              children: [
+                ...charging.chargingItems.map((item) => ListTile(
+                      title: Text('Produto ID: ${item.productId}'),
+                      subtitle: Text('Quantidade: ${item.quantity}'),
+                    )),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.check),
+                    label: const Text('Selecionar este carregamento'),
+                    onPressed: () => widget.onChargingSelected(charging),
+                  ),
+                ),
+              ],
             );
-          },
+          }).toList(),
         );
       },
     );

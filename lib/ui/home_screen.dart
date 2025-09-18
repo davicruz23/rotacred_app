@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rotacred_app/ui/fiscal/inspector_screen.dart';
 import 'package:rotacred_app/ui/seller/seller_screen.dart';
 import '../model/user.dart';
 import 'funcionario/funcionario_screen.dart';
@@ -14,6 +15,8 @@ class HomeScreen extends StatelessWidget {
         return FuncionarioScreen(user: user);
        case 'VENDEDOR':
          return SellerScreen(user: user);
+        case 'FISCAL':
+          return InspectorScreen(user: user);
       default:
         return Scaffold(
           body: Center(
