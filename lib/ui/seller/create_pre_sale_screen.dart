@@ -6,6 +6,8 @@ import '../../model/client.dart';
 import '../../model/address.dart';
 import '../../model/charging.dart';
 import '../../services/pre_sale_service.dart';
+import '../../services/seller_service.dart';
+import '../../model/dto/seller_dto.dart';
 
 class CreatePreSaleScreen extends StatefulWidget {
   final User user;
@@ -23,6 +25,7 @@ class CreatePreSaleScreen extends StatefulWidget {
 class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
   final _formKey = GlobalKey<FormState>();
   final PreSaleService _preSaleService = PreSaleService();
+  final SellerService _sellerService = SellerService();
   bool _isLoading = false;
 
   final TextEditingController _nameCtrl = TextEditingController();
@@ -53,7 +56,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     ...widget.charging.chargingItems.map((item) {
                       final quantity = _selectedProducts[item.productId] ?? 0;
                       return ListTile(
@@ -90,6 +92,7 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         ),
                       );
                     }),
+                    const SizedBox(height: 20),
                     const Text(
                       "Dados do Cliente",
                       style: TextStyle(
@@ -117,7 +120,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                       controller: _streetCtrl,
                       decoration: const InputDecoration(labelText: "Rua"),
                     ),
-
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.check),
@@ -142,10 +144,23 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final items = _selectedProducts.entries
-          .map((e) => PreSaleItem(productId: e.key, quantity: e.value))
+      // Cria a lista de produtos
+      final items = widget.charging.chargingItems
+          .where(
+            (item) =>
+                _selectedProducts[item.productId] != null &&
+                _selectedProducts[item.productId]! > 0,
+          )
+          .map(
+            (item) => PreSaleItem(
+              productId: item.productId,
+              productName: item.nameProduct, // agora vem o nome
+              quantity: _selectedProducts[item.productId]!,
+            ),
+          )
           .toList();
 
+      // Cria o cliente
       final client = Client(
         id: 0,
         name: _nameCtrl.text,
@@ -162,14 +177,17 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
         ),
       );
 
+      final seller = await _sellerService.getSellerByUserId(widget.user.id);
+
       final preSale = PreSale(
         preSaleDate: DateTime.now(),
-        sellerId: 1,
+        seller: seller, // <-- só envia o id aqui
         client: client,
-        products: items,
+        items: items,
         chargingId: widget.charging.id!,
       );
 
+      // Envia para o backend
       await _preSaleService.createPreSale(preSale);
 
       if (!mounted) return;
@@ -181,6 +199,7 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Erro: $e")));
+      print(e);
     } finally {
       setState(() => _isLoading = false);
     }
