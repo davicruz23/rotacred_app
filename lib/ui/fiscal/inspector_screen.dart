@@ -3,10 +3,18 @@ import 'package:rotacred_app/services/inspector_service.dart';
 import '../../model/user.dart';
 import '../fiscal/inspector_pending_sales_screen.dart';
 import '../../model/dto/inspector_dto.dart';
+import '../login_screen.dart';
 
 class InspectorScreen extends StatelessWidget {
   final User user;
   const InspectorScreen({super.key, required this.user});
+
+  void _logout(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +35,26 @@ class InspectorScreen extends StatelessWidget {
           length: 2,
           child: Scaffold(
             appBar: AppBar(
-              title: Text("Fiscal - ${user.name}"),
+              title: Row(
+                children: [
+                  const Text("Fiscal"),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      user.name, // 👈 mostra o nome do usuário logado
+                      style: const TextStyle(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Sair',
+                  onPressed: () => _logout(context),
+                ),
+              ],
               bottom: const TabBar(
                 tabs: [
                   Tab(text: "Pendentes", icon: Icon(Icons.assignment)),
@@ -37,12 +64,9 @@ class InspectorScreen extends StatelessWidget {
             ),
             body: TabBarView(
               children: [
-                // Aba 1: pré-vendas pendentes
                 InspectorPendingPreSalesScreen(
-                  inspectorId: inspector.idInspector, // ✅ agora sim o ID certo
+                  inspectorId: inspector.idInspector,
                 ),
-
-                // Aba 2: histórico
                 const Center(
                   child: Text(
                     "Histórico em construção...",

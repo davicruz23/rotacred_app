@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rotacred_app/model/user.dart';
+import '../login_screen.dart'; 
 import '../funcionario/add_charging_tab.dart';
 import '../funcionario/list_chargings_tab.dart';
 import '../funcionario/products_tab.dart';
@@ -21,6 +22,13 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
     });
   }
 
+  void _logout() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabs = [
@@ -28,7 +36,6 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
       ListChargingsTab(
         user: widget.user,
         onChargingSelected: (charging) {
-          // Aqui você pode navegar para ProductsTab ou pré-venda
           print('Carregamento selecionado: ${charging.description}');
         },
       ),
@@ -36,7 +43,16 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Funcionário - Carregamentos')),
+      appBar: AppBar(
+        title: const Text('Funcionário - Carregamentos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sair',
+            onPressed: _logout,
+          ),
+        ],
+      ),
       body: tabs[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
