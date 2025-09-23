@@ -39,10 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Logo
                 Image.asset(
-                  'assets/logo.png', // coloque sua logo aqui
-                  height: 120,
+                  'assets/logo.png',
+                  height: 300,
+                  width: 300,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 0),
 
                 // Card de login
                 Card(

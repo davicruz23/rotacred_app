@@ -36,20 +36,85 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Produtos - ${_charging.description}")),
-      body: ListView.builder(
-        itemCount: _charging.chargingItems.length,
-        itemBuilder: (context, index) {
-          final item = _charging.chargingItems[index];
-          return ListTile(
-            title: Text(item.nameProduct),
-            subtitle: Text(
-              "Marca: ${item.brand} | Qtd disponível: ${item.quantity}",
+      appBar: AppBar(
+        backgroundColor: Colors.blue.shade700,
+        elevation: 2,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white,
+              child: Text(
+                widget.user.name.substring(0, 1).toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-          );
-        },
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _charging.description,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
+      body: _charging.chargingItems.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nenhum produto disponível neste carregamento.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _charging.chargingItems.length,
+              itemBuilder: (context, index) {
+                final item = _charging.chargingItems[index];
+                return Card(
+                  elevation: 3,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    title: Text(
+                      item.nameProduct,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      "Marca: ${item.brand} | Qtd disponível: ${item.quantity}",
+                    ),
+                    leading: const Icon(
+                      Icons.shopping_cart_outlined,
+                      color: Colors.blue,
+                    ),
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.green,
         icon: const Icon(Icons.shopping_cart),
         label: const Text("Iniciar Pré-venda"),
         onPressed: () async {

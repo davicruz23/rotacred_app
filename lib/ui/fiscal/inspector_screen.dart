@@ -23,10 +23,30 @@ class InspectorScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(color: Colors.blueAccent),
+            ),
           );
         } else if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text("Erro: ${snapshot.error}")));
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Erro: ${snapshot.error}",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         final inspector = snapshot.data!;
@@ -35,14 +55,27 @@ class InspectorScreen extends StatelessWidget {
           length: 2,
           child: Scaffold(
             appBar: AppBar(
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blueAccent, Colors.lightBlue],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
               title: Row(
                 children: [
-                  const Text("Fiscal"),
-                  const SizedBox(width: 16),
+                  const Icon(Icons.badge, color: Colors.white),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      user.name, // 👈 mostra o nome do usuário logado
-                      style: const TextStyle(fontSize: 16),
+                      "Fiscal - ${user.name}",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -50,15 +83,18 @@ class InspectorScreen extends StatelessWidget {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.logout),
+                  icon: const Icon(Icons.logout, color: Colors.white),
                   tooltip: 'Sair',
                   onPressed: () => _logout(context),
                 ),
               ],
               bottom: const TabBar(
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
                 tabs: [
-                  Tab(text: "Pendentes", icon: Icon(Icons.assignment)),
-                  Tab(text: "Histórico", icon: Icon(Icons.history)),
+                  Tab(icon: Icon(Icons.assignment), text: "Pendentes"),
+                  Tab(icon: Icon(Icons.history), text: "Histórico"),
                 ],
               ),
             ),
@@ -70,7 +106,11 @@ class InspectorScreen extends StatelessWidget {
                 const Center(
                   child: Text(
                     "Histórico em construção...",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black54,
+                    ),
                   ),
                 ),
               ],

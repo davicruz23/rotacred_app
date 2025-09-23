@@ -23,8 +23,7 @@ class _InspectorPendingPreSalesScreenState
   }
 
   void _loadPreSales() {
-    _futurePreSales =
-        InspectorService().getPendingPreSales(widget.inspectorId);
+    _futurePreSales = InspectorService().getPendingPreSales(widget.inspectorId);
   }
 
   @override
@@ -35,6 +34,7 @@ class _InspectorPendingPreSalesScreenState
         title: const Text("Pré-vendas pendentes"),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.blueAccent,
       ),
       body: FutureBuilder<List<PreSale>>(
         future: _futurePreSales,
@@ -42,7 +42,12 @@ class _InspectorPendingPreSalesScreenState
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text("Erro: ${snapshot.error}"));
+            return Center(
+              child: Text(
+                "Erro: ${snapshot.error}",
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
@@ -62,7 +67,6 @@ class _InspectorPendingPreSalesScreenState
 
               return GestureDetector(
                 onTap: () async {
-                  // Abre detalhe e aguarda resultado
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -73,13 +77,13 @@ class _InspectorPendingPreSalesScreenState
                     ),
                   );
 
-                  // Se aprovou ou recusou, recarrega lista
                   if (result == true) {
                     setState(() => _loadPreSales());
                   }
                 },
                 child: Card(
-                  elevation: 4,
+                  elevation: 3,
+                  shadowColor: Colors.black26,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -89,10 +93,11 @@ class _InspectorPendingPreSalesScreenState
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: Colors.blue.shade100,
+                          radius: 24,
+                          backgroundColor: Colors.blue.shade50,
                           child: const Icon(
-                            Icons.assignment,
-                            color: Colors.blue,
+                            Icons.assignment_outlined,
+                            color: Colors.blueAccent,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -112,7 +117,7 @@ class _InspectorPendingPreSalesScreenState
                                 "Cliente: ${preSale.client.name}",
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey.shade700,
+                                  color: Colors.grey.shade800,
                                 ),
                               ),
                               const SizedBox(height: 2),

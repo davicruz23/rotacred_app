@@ -36,7 +36,6 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
       ListChargingsTab(
         user: widget.user,
         onChargingSelected: (charging) {
-          print('Carregamento selecionado: ${charging.description}');
         },
       ),
       ProductsTab(user: widget.user),
@@ -44,29 +43,34 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Funcionário - Carregamentos'),
+        title: const Text(
+          'Funcionário',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        backgroundColor: Colors.blueAccent,
+        elevation: 4,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Sair',
             onPressed: _logout,
           ),
         ],
       ),
-      body: tabs[_selectedIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: tabs[_selectedIndex],
+      ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
         onTap: _onTabSelected,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Adicionar'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'Carregamentos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: 'Produtos',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Adicionar'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Carregamentos'),
+          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produtos'),
         ],
       ),
     );
