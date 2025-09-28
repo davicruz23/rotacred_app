@@ -5,6 +5,7 @@ class ChargingItem {
   final int quantity;
   final String nameProduct;
   final String brand;
+  final double priceProduct;
 
   ChargingItem({
     required this.id,
@@ -12,7 +13,8 @@ class ChargingItem {
     required this.chargingId,
     required this.quantity,
     required this.nameProduct,
-    required this.brand
+    required this.brand,
+    required this.priceProduct
   });
 
   factory ChargingItem.fromJson(Map<String, dynamic> json) {
@@ -22,7 +24,8 @@ class ChargingItem {
       chargingId: json['chargingId'] ?? 0,
       quantity: json['quantity'] ?? 0,
       nameProduct: json['nameProduct'] ?? "",
-      brand: json['brand'] ?? ""
+      brand: json['brand'] ?? "",
+      priceProduct: json['priceProduct'] ?? 0
     );
   }
 }

@@ -7,7 +7,6 @@ import '../../model/address.dart';
 import '../../model/charging.dart';
 import '../../services/pre_sale_service.dart';
 import '../../services/seller_service.dart';
-import '../../model/dto/seller_dto.dart';
 
 class CreatePreSaleScreen extends StatefulWidget {
   final User user;
@@ -33,13 +32,21 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
   final TextEditingController _phoneCtrl = TextEditingController();
   final TextEditingController _cityCtrl = TextEditingController();
   final TextEditingController _streetCtrl = TextEditingController();
+  final TextEditingController _numberCtrl = TextEditingController();
+  final TextEditingController _stateCtrl = TextEditingController();
+  final TextEditingController _zipCodeCtrl = TextEditingController();
+  final TextEditingController _complementCtrl = TextEditingController();
 
   final Map<int, int> _selectedProducts = {};
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Finalizar Pré-venda")),
+      appBar: AppBar(
+        title: const Text("Finalizar Pré-venda"),
+        backgroundColor: Colors.blue.shade700,
+        elevation: 2,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -48,7 +55,7 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    const SizedBox(height: 20),
+                    // ========= Produtos =========
                     const Text(
                       "Seleção de Produtos",
                       style: TextStyle(
@@ -56,43 +63,80 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     ...widget.charging.chargingItems.map((item) {
                       final quantity = _selectedProducts[item.productId] ?? 0;
-                      return ListTile(
-                        title: Text(
-                          "${item.nameProduct} (disp: ${item.quantity})",
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove),
-                              onPressed: () {
-                                setState(() {
-                                  if (quantity > 0) {
-                                    _selectedProducts[item.productId] =
-                                        quantity - 1;
-                                  }
-                                });
-                              },
-                            ),
-                            Text(quantity.toString()),
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              onPressed: () {
-                                if (quantity < item.quantity) {
-                                  setState(() {
-                                    _selectedProducts[item.productId] =
-                                        quantity + 1;
-                                  });
-                                }
-                              },
-                            ),
-                          ],
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.nameProduct,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "R\$ ${item.priceProduct} • Disponível: ${item.quantity}",
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        if (quantity > 0) {
+                                          _selectedProducts[item.productId] =
+                                              quantity - 1;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  Text(
+                                    quantity.toString(),
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline),
+                                    onPressed: () {
+                                      if (quantity < item.quantity) {
+                                        setState(() {
+                                          _selectedProducts[item.productId] =
+                                              quantity + 1;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
-                    }),
+                    }).toList(),
                     const SizedBox(height: 20),
+
+                    // ========= Cliente =========
                     const Text(
                       "Dados do Cliente",
                       style: TextStyle(
@@ -100,31 +144,166 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    TextFormField(
-                      controller: _nameCtrl,
-                      decoration: const InputDecoration(labelText: "Nome"),
+                    const SizedBox(height: 8),
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                      shadowColor: Colors.black26,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Dados do Cliente",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Divider(thickness: 1.2),
+                            const SizedBox(height: 8),
+
+                            // Nome e CPF
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _nameCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Nome",
+                                      prefixIcon: Icon(Icons.person),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _cpfCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "CPF",
+                                      prefixIcon: Icon(Icons.badge),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Telefone e CEP
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _phoneCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Telefone",
+                                      prefixIcon: Icon(Icons.phone),
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _zipCodeCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "CEP",
+                                      prefixIcon: Icon(Icons.location_on),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Endereço: Rua, Número, Complemento
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    controller: _streetCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Rua",
+                                      prefixIcon: Icon(Icons.home),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 1,
+                                  child: TextFormField(
+                                    controller: _numberCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Número",
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Cidade e Estado
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _cityCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Cidade",
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _stateCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: "Estado",
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Complemento
+                            TextFormField(
+                              controller: _complementCtrl,
+                              decoration: const InputDecoration(
+                                labelText: "Complemento",
+                                prefixIcon: Icon(Icons.note),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    TextFormField(
-                      controller: _cpfCtrl,
-                      decoration: const InputDecoration(labelText: "CPF"),
-                    ),
-                    TextFormField(
-                      controller: _phoneCtrl,
-                      decoration: const InputDecoration(labelText: "Telefone"),
-                    ),
-                    TextFormField(
-                      controller: _cityCtrl,
-                      decoration: const InputDecoration(labelText: "Cidade"),
-                    ),
-                    TextFormField(
-                      controller: _streetCtrl,
-                      decoration: const InputDecoration(labelText: "Rua"),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text("Confirmar Pré-venda"),
-                      onPressed: _sendPreSale,
+
+                    // ========= Botão Finalizar =========
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check),
+                        label: const Text(
+                          "Confirmar Pré-venda",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                        onPressed: _sendPreSale,
+                      ),
                     ),
                   ],
                 ),
@@ -144,7 +323,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // Cria a lista de produtos
       final items = widget.charging.chargingItems
           .where(
             (item) =>
@@ -154,13 +332,12 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
           .map(
             (item) => PreSaleItem(
               productId: item.productId,
-              productName: item.nameProduct, // agora vem o nome
+              productName: item.nameProduct,
               quantity: _selectedProducts[item.productId]!,
             ),
           )
           .toList();
 
-      // Cria o cliente
       final client = Client(
         id: 0,
         name: _nameCtrl.text,
@@ -168,12 +345,12 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
         phone: _phoneCtrl.text,
         address: Address(
           id: 0,
-          state: "RN",
+          state: _stateCtrl.text,
           city: _cityCtrl.text,
           street: _streetCtrl.text,
-          number: "0",
-          zipCode: "00000-000",
-          complement: "",
+          number: _numberCtrl.text,
+          zipCode: _zipCodeCtrl.text,
+          complement: _complementCtrl.text,
         ),
       );
 
@@ -181,13 +358,12 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
 
       final preSale = PreSale(
         preSaleDate: DateTime.now(),
-        seller: seller, // <-- só envia o id aqui
+        seller: seller,
         client: client,
         items: items,
         chargingId: widget.charging.id!,
       );
 
-      // Envia para o backend
       await _preSaleService.createPreSale(preSale);
 
       if (!mounted) return;

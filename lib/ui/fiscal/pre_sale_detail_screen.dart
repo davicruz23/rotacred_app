@@ -36,7 +36,10 @@ class PreSaleDetailScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 'Pré-venda #${preSale.id}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -47,7 +50,12 @@ class PreSaleDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         child: ListView(
           children: [
-            _infoCard("Data:", "${preSale.preSaleDate}", "Vendedor:", preSale.seller.nomeSeller),
+            _infoCard(
+              "Data:",
+              "${preSale.preSaleDate}",
+              "Vendedor:",
+              preSale.seller.nomeSeller,
+            ),
             const SizedBox(height: 16),
             _clientCard(),
             const SizedBox(height: 16),
@@ -88,7 +96,10 @@ class PreSaleDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Dados do Cliente", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Dados do Cliente",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const Divider(),
             _infoRow("Nome:", preSale.client.name),
             _infoRow("CPF:", preSale.client.cpf),
@@ -115,13 +126,22 @@ class PreSaleDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Produtos", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Produtos",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const Divider(),
             ...preSale.items.map(
               (item) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.shopping_cart_outlined, color: Colors.blue),
-                title: Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                leading: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Colors.blue,
+                ),
+                title: Text(
+                  item.productName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 subtitle: Text("Quantidade: ${item.quantity}"),
               ),
             ),
@@ -138,7 +158,13 @@ class PreSaleDetailScreen extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(width: 6),
-          Expanded(child: Text(value, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black87))),
+          Expanded(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.black87),
+            ),
+          ),
         ],
       ),
     );
@@ -153,7 +179,9 @@ class PreSaleDetailScreen extends StatelessWidget {
           label: const Text("Aprovar"),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           onPressed: () => _showApproveModal(context),
@@ -163,7 +191,9 @@ class PreSaleDetailScreen extends StatelessWidget {
           label: const Text("Recusar"),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           onPressed: () => _showRejectModal(context),
@@ -178,21 +208,32 @@ class PreSaleDetailScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Row(
-          children: const [Icon(Icons.warning, color: Colors.red), SizedBox(width: 8), Text("Confirmar recusa")],
+          children: const [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text("Confirmar recusa"),
+          ],
         ),
         content: const Text("Tem certeza que deseja recusar esta pré-venda?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.pop(context);
               try {
                 await InspectorService().rejectPreSale(preSale.id!);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pré-venda recusada")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Pré-venda recusada")),
+                );
                 Navigator.pop(context, true);
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text("Erro: $e")));
               }
             },
             child: const Text("Recusar"),
@@ -205,62 +246,114 @@ class PreSaleDetailScreen extends StatelessWidget {
   void _showApproveModal(BuildContext context) {
     String paymentMethod = "CASH";
     int installments = 0;
+    double? cashPaid;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Row(
-          children: const [Icon(Icons.check_circle, color: Colors.green), SizedBox(width: 8), Text("Aprovar venda")],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: paymentMethod,
-                items: const [
-                  DropdownMenuItem(value: "CASH", child: Text("Dinheiro")),
-                  DropdownMenuItem(value: "PARCEL", child: Text("Parcelado")),
-                  DropdownMenuItem(value: "CREDIT", child: Text("Crédito")),
-                  DropdownMenuItem(value: "DEBIT", child: Text("Débito")),
-                  DropdownMenuItem(value: "PIX", child: Text("PIX")),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            title: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text("Aprovar venda"),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: paymentMethod,
+                    items: const [
+                      DropdownMenuItem(value: "CASH", child: Text("Dinheiro")),
+                      DropdownMenuItem(
+                        value: "PARCEL",
+                        child: Text("Parcelado"),
+                      ),
+                      DropdownMenuItem(value: "CREDIT", child: Text("Crédito")),
+                      DropdownMenuItem(value: "DEBIT", child: Text("Débito")),
+                      DropdownMenuItem(value: "PIX", child: Text("PIX")),
+                    ],
+                    onChanged: (val) =>
+                        setState(() => paymentMethod = val ?? "CASH"),
+                    decoration: const InputDecoration(
+                      labelText: "Método de pagamento",
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // ✅ Exibe o campo de valor à vista somente se for "CASH"
+                  if (paymentMethod == "CASH") ...[
+                    TextFormField(
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: "Valor pago à vista",
+                        prefixText: "R\$ ",
+                      ),
+                      onChanged: (val) {
+                        setState(
+                          () => cashPaid = double.tryParse(
+                            val.replaceAll(',', '.'),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // ✅ Campo de parcelas continua sempre visível
+                  TextFormField(
+                    initialValue: installments.toString(),
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Parcelas (se houver)",
+                    ),
+                    onChanged: (val) =>
+                        setState(() => installments = int.tryParse(val) ?? 0),
+                  ),
                 ],
-                onChanged: (val) => paymentMethod = val ?? "CASH",
-                decoration: const InputDecoration(labelText: "Método de pagamento"),
               ),
-              const SizedBox(height: 10),
-              TextFormField(
-                initialValue: installments.toString(),
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Parcelas (se houver)"),
-                onChanged: (val) => installments = int.tryParse(val) ?? 0,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancelar"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    await InspectorService().approvePreSale(
+                      preSaleId: preSale.id!,
+                      inspectorId: inspectorId,
+                      paymentMethod: paymentMethod,
+                      installments: installments,
+                      cashPaid: cashPaid, // ✅ envia o valor pago à vista
+                    );
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Pré-venda aprovada")),
+                    );
+                    Navigator.pop(context, true);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Erro ao aprovar: $e")),
+                    );
+                  }
+                },
+                child: const Text("Aprovar"),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await InspectorService().approvePreSale(
-                  preSaleId: preSale.id!,
-                  inspectorId: inspectorId,
-                  paymentMethod: paymentMethod,
-                  installments: installments,
-                );
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Pré-venda aprovada")));
-                Navigator.pop(context, true);
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao aprovar: $e")));
-              }
-            },
-            child: const Text("Aprovar"),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

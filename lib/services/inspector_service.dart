@@ -27,6 +27,7 @@ class InspectorService {
     required int inspectorId,
     required String paymentMethod,
     required int installments,
+    double? cashPaid,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/approve"),
@@ -35,6 +36,7 @@ class InspectorService {
         "inspectorId": inspectorId,
         "paymentMethod": paymentMethod,
         "installments": installments,
+        "cashPaid": cashPaid ?? 0,
       }),
     );
     if (response.statusCode != 200) {
