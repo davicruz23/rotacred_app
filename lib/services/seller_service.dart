@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:rotacred_app/model/dto/seller_dto.dart';
-import '../model/dto/seller_id_user_dto.dart';
 import '../env/environment.dart';
 
 class SellerService {
