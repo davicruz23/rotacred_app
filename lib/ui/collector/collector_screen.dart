@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../model/dto/sale_collector_dto.dart';
 import '../../services/collector_service.dart';
 import '../../model/user.dart';
 import '../login_screen.dart';
+import '../widgets/pix_qr_code_widget.dart';
 
 class CollectorScreen extends StatefulWidget {
   final User user;
@@ -46,20 +48,164 @@ class _CollectorScreenState extends State<CollectorScreen> {
     }
   }
 
-  Future<void> _markAsPaid(int installmentId) async {
-    try {
-      await CollectorService().paySale(installmentId);
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Pagamento marcado com sucesso ✅")),
+    // Verifica se o serviço de localização está ativo
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Serviço de localização desativado');
+    }
+
+    // Verifica e solicita permissão
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Permissão de localização negada');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('Permissão de localização negada permanentemente');
+    }
+
+    // ✅ Nova forma de obter a posição
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+  }
+
+  Future<void> _markAsPaid(int installmentId, double amount) async {
+    try {
+      final pos = await _getCurrentLocation();
+
+      // Exibir seleção da forma de pagamento
+      final paymentMethod = await showDialog<String>(
+        context: context,
+        builder: (_) => SimpleDialog(
+          title: const Text("Selecione a forma de pagamento"),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, "CASH"),
+              child: const Text("💵 Dinheiro"),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, "PIX"),
+              child: const Text("⚡ Pix"),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, "CREDIT"),
+              child: const Text("💳 Cartão"),
+            ),
+          ],
+        ),
       );
 
-      // Recarrega as vendas para refletir o novo status
-      await _fetchCollectorSales();
-    } catch (e) {
+      if (paymentMethod == null) return;
+
+      if (paymentMethod == "PIX") {
+        // Gera e busca o QR Code do backend
+        final qrImage = await CollectorService().getPixQrCode(installmentId);
+
+        // Exibe o QR Code com opção de confirmar
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text("Pagamento via PIX"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.memory(qrImage, width: 200, height: 200),
+                const SizedBox(height: 10),
+                const Text(
+                  "Escaneie o QR Code acima para pagar.\n"
+                  "Após o cliente confirmar o envio, toque em 'Confirmar pagamento'.",
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancelar"),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text("Confirmar pagamento"),
+                onPressed: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+        );
+
+        // Registra tentativa
+        await CollectorService().collectInstallment(
+          collectorId: _collectorId!,
+          installmentId: installmentId,
+          note: "Pago via PIX",
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        );
+
+        // Se o cobrador confirmou manualmente, registra o pagamento
+        if (confirmed == true) {
+          await CollectorService().collectInstallment(
+            collectorId: _collectorId!,
+            installmentId: installmentId,
+            amount: amount,
+            paymentMethod: paymentMethod,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            note: "PIX confirmado manualmente",
+          );
+        }
+      } else {
+        // Pagamento direto (dinheiro/cartão)
+        await CollectorService().collectInstallment(
+          collectorId: _collectorId!,
+          installmentId: installmentId,
+          amount: amount,
+          paymentMethod: paymentMethod,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          note: "Pagamento realizado com sucesso",
+        );
+      }
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Erro ao marcar pagamento: $e")));
+      ).showSnackBar(const SnackBar(content: Text("Pagamento registrado ✅")));
+
+      await _fetchCollectorSales();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao registrar pagamento: $e")),
+      );
+    }
+  }
+
+  Future<void> _registerAttempt(int installmentId, String status) async {
+    try {
+      final pos = await _getCurrentLocation();
+
+      await CollectorService().collectInstallment(
+        collectorId: _collectorId!,
+        installmentId: installmentId,
+        note: status,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Tentativa registrada: $status ✅")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao registrar tentativa: $e")),
+      );
     }
   }
 
@@ -130,7 +276,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
                             final index = entry.key;
                             final inst = entry.value;
 
-                            // Verifica se todas as parcelas anteriores estão pagas
                             final canPay =
                                 index == 0 ||
                                 sale.installments
@@ -142,25 +287,88 @@ class _CollectorScreenState extends State<CollectorScreen> {
                               title: Text(
                                 "Vencimento: ${inst.dueDate.toLocal().toString().split(' ')[0]} - R\$ ${inst.amount}",
                               ),
-                              trailing: inst.paid
-                                  ? const Icon(
-                                      Icons.attach_money,
-                                      color: Colors.green,
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(
-                                        Icons.attach_money,
-                                        color: Color.fromARGB(255, 235, 2, 2),
-                                      ),
-                                      tooltip: canPay
-                                          ? "Marcar como pago"
-                                          : "Pague as parcelas anteriores primeiro",
-                                      onPressed: canPay
-                                          ? () async {
-                                              await _markAsPaid(inst.id);
-                                            }
-                                          : null, // desabilita se não puder pagar
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (!inst.paid)
+                                    IconButton(
+                                      icon: const Icon(Icons.location_pin),
+                                      tooltip: "Registrar tentativa",
+                                      onPressed: () async {
+                                        final result = await showDialog<String>(
+                                          context: context,
+                                          builder: (_) => SimpleDialog(
+                                            title: const Text(
+                                              "Registrar tentativa",
+                                            ),
+                                            children: [
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  "CLIENTE AUSENTE",
+                                                ),
+                                                child: const Text(
+                                                  "Cliente ausente",
+                                                ),
+                                              ),
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  "RECUSOU PAGAMENTO",
+                                                ),
+                                                child: const Text(
+                                                  "Recusou pagamento",
+                                                ),
+                                              ),
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  "ENDEREÇO ERRADO",
+                                                ),
+                                                child: const Text(
+                                                  "Endereço errado",
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (result != null) {
+                                          await _registerAttempt(
+                                            inst.id,
+                                            result,
+                                          );
+                                        }
+                                      },
                                     ),
+                                  inst.paid
+                                      ? const Icon(
+                                          Icons.attach_money,
+                                          color: Colors.green,
+                                        )
+                                      : IconButton(
+                                          icon: const Icon(
+                                            Icons.attach_money,
+                                            color: Color.fromARGB(
+                                              255,
+                                              235,
+                                              2,
+                                              2,
+                                            ),
+                                          ),
+                                          tooltip: canPay
+                                              ? "Marcar como pago"
+                                              : "Pague as parcelas anteriores primeiro",
+                                          onPressed: canPay
+                                              ? () async {
+                                                  await _markAsPaid(
+                                                    inst.id,
+                                                    inst.amount,
+                                                  );
+                                                }
+                                              : null,
+                                        ),
+                                ],
+                              ),
                             );
                           }),
                         ],
