@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../model/pre_sale.dart';
 import '../../services/inspector_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class PreSaleDetailScreen extends StatelessWidget {
   final PreSale preSale;
@@ -12,9 +13,39 @@ class PreSaleDetailScreen extends StatelessWidget {
     required this.inspectorId,
   });
 
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Verifica se o serviço de localização está ativo
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Serviço de localização desativado');
+    }
+
+    // Verifica e solicita permissão
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Permissão de localização negada');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('Permissão de localização negada permanentemente');
+    }
+
+    // ✅ Nova forma de obter a posição
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF2F3F7),
       appBar: AppBar(
         backgroundColor: Colors.blue.shade700,
         elevation: 2,
@@ -29,7 +60,10 @@ class PreSaleDetailScreen extends StatelessWidget {
               backgroundColor: Colors.white,
               child: Text(
                 preSale.seller.nomeSeller.substring(0, 1).toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -37,8 +71,9 @@ class PreSaleDetailScreen extends StatelessWidget {
               child: Text(
                 'Pré-venda #${preSale.id}',
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -50,17 +85,67 @@ class PreSaleDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         child: ListView(
           children: [
-            _infoCard(
+            // Informações básicas
+            _highlightInfoCard(
               "Data:",
               "${preSale.preSaleDate}",
               "Vendedor:",
               preSale.seller.nomeSeller,
             ),
-            const SizedBox(height: 16),
-            _clientCard(),
-            const SizedBox(height: 16),
-            _productsCard(),
+
+            const SizedBox(height: 20),
+
+            // Destaque: Cliente
+            _highlightCard(
+              icon: Icons.person,
+              title: "Dados do Cliente",
+              children: [
+                _infoRow("Nome:", preSale.client.name),
+                _infoRow("CPF:", preSale.client.cpf),
+                _infoRow("Telefone:", preSale.client.phone),
+                const SizedBox(height: 8),
+                Text(
+                  "Endereço: ${preSale.client.address.street}, ${preSale.client.address.number}, "
+                  "${preSale.client.address.city} - ${preSale.client.address.state}",
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Destaque: Produtos
+            _highlightCard(
+              icon: Icons.shopping_cart,
+              title: "Produtos",
+              children: preSale.items
+                  .map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.blueAccent,
+                      ),
+                      title: Text(
+                        item.productName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      trailing: Text(
+                        "x${item.quantity}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
             const SizedBox(height: 30),
+
+            // Botões de ação
             _actionButtons(context),
           ],
         ),
@@ -68,83 +153,94 @@ class PreSaleDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoCard(String label1, String value1, String label2, String value2) {
+  // Cartão básico para info rápida
+  // Widget _infoCard(String label1, String value1, String label2, String value2) {
+  //   return Card(
+  //     elevation: 3,
+  //     shadowColor: Colors.black12,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16.0),
+  //       child: Column(
+  //         children: [
+  //           _infoRow(label1, value1),
+  //           const SizedBox(height: 8),
+  //           _infoRow(label2, value2),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // Cartão de destaque (cliente ou produtos)
+  Widget _highlightCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
     return Card(
-      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 6,
       shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.blue.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.blueAccent),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(thickness: 1.2),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _highlightInfoCard(
+    String label1,
+    String value1,
+    String label2,
+    String value2,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 6,
+      shadowColor: Colors.black26,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.blue.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             _infoRow(label1, value1),
-            const SizedBox(height: 10),
-            _infoRow(label2, value2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _clientCard() {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Dados do Cliente",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            _infoRow("Nome:", preSale.client.name),
-            _infoRow("CPF:", preSale.client.cpf),
-            _infoRow("Telefone:", preSale.client.phone),
             const SizedBox(height: 8),
-            Text(
-              "Endereço: ${preSale.client.address.street}, ${preSale.client.address.number}, "
-              "${preSale.client.address.city} - ${preSale.client.address.state}",
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _productsCard() {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Produtos",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-            ...preSale.items.map(
-              (item) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  Icons.shopping_cart_outlined,
-                  color: Colors.blue,
-                ),
-                title: Text(
-                  item.productName,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text("Quantidade: ${item.quantity}"),
-              ),
-            ),
+            _infoRow(label2, value2),
           ],
         ),
       ),
@@ -153,16 +249,19 @@ class PreSaleDetailScreen extends StatelessWidget {
 
   Widget _infoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               value,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black87),
+              style: const TextStyle(color: Colors.black87, fontSize: 14),
             ),
           ),
         ],
@@ -180,9 +279,9 @@ class PreSaleDetailScreen extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
           onPressed: () => _showApproveModal(context),
         ),
@@ -190,11 +289,11 @@ class PreSaleDetailScreen extends StatelessWidget {
           icon: const Icon(Icons.close, color: Colors.white),
           label: const Text("Recusar"),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.redAccent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
           onPressed: () => _showRejectModal(context),
         ),
@@ -287,7 +386,6 @@ class PreSaleDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // ✅ Exibe o campo de valor à vista somente se for "CASH"
                   if (paymentMethod == "CASH") ...[
                     TextFormField(
                       keyboardType: const TextInputType.numberWithOptions(
@@ -308,7 +406,6 @@ class PreSaleDetailScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                   ],
 
-                  // ✅ Campo de parcelas continua sempre visível
                   TextFormField(
                     initialValue: installments.toString(),
                     keyboardType: TextInputType.number,
@@ -329,19 +426,28 @@ class PreSaleDetailScreen extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                 onPressed: () async {
-                  Navigator.pop(context);
                   try {
+                    // ✅ 1. Captura localização
+                    final pos = await _getCurrentLocation();
+
+                    // ✅ 2. Envia tudo ao backend
                     await InspectorService().approvePreSale(
                       preSaleId: preSale.id!,
                       inspectorId: inspectorId,
                       paymentMethod: paymentMethod,
                       installments: installments,
-                      cashPaid: cashPaid, // ✅ envia o valor pago à vista
+                      cashPaid: cashPaid,
+                      latitude: pos.latitude,
+                      longitude: pos.longitude,
                     );
 
+                    // ✅ 3. Fecha o diálogo só depois do sucesso
+                    Navigator.pop(context);
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Pré-venda aprovada")),
+                      const SnackBar(content: Text("Pré-venda aprovada ✅")),
                     );
+
                     Navigator.pop(context, true);
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(

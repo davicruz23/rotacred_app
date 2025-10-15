@@ -15,4 +15,29 @@ class ProductService {
       throw Exception('Erro ao buscar produtos');
     }
   }
+
+  Future<Map<String, dynamic>> getProductsPaged({
+    int page = 0,
+    int size = 10,
+  }) async {
+    final response = await http.get(Uri.parse('$baseUrl/product/index?page=$page&size=$size'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      final List<Product> products = (data['content'] as List)
+          .map((e) => Product.fromJson(e))
+          .toList();
+
+      return {
+        'content': products,
+        'totalElements': data['totalElements'],
+        'totalPages': data['totalPages'],
+        'pageNumber': data['number'],
+      };
+    } else {
+      throw Exception('Erro ao buscar produtos paginados');
+    }
+  }
 }

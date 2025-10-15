@@ -14,6 +14,7 @@ class CollectorService {
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
+      print('cobranças: ${response.body}');
       final List<dynamic> data = jsonDecode(response.body);
 
       return data.map((json) => SaleCollectorDTO.fromJson(json)).toList();

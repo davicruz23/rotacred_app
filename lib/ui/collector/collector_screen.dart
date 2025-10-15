@@ -4,7 +4,6 @@ import '../../model/dto/sale_collector_dto.dart';
 import '../../services/collector_service.dart';
 import '../../model/user.dart';
 import '../login_screen.dart';
-import '../widgets/pix_qr_code_widget.dart';
 
 class CollectorScreen extends StatefulWidget {
   final User user;

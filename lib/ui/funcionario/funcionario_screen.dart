@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rotacred_app/model/user.dart';
-import '../login_screen.dart'; 
+import '../login_screen.dart';
 import '../funcionario/add_charging_tab.dart';
 import '../funcionario/list_chargings_tab.dart';
 import '../funcionario/products_tab.dart';
@@ -15,63 +15,149 @@ class FuncionarioScreen extends StatefulWidget {
 
 class _FuncionarioScreenState extends State<FuncionarioScreen> {
   int _selectedIndex = 0;
+  late final PageController _pageController;
 
-  void _onTabSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
   }
 
-  void _logout() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onTabSelected(int index) {
+    setState(() => _selectedIndex = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
+  }
+
+  void _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sair da conta'),
+        content: const Text('Tem certeza de que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final tabs = [
       AddChargingTab(user: widget.user),
-      ListChargingsTab(
-        user: widget.user,
-        onChargingSelected: (charging) {
-        },
-      ),
+      ListChargingsTab(user: widget.user, onChargingSelected: (charging) {}),
       ProductsTab(user: widget.user),
     ];
 
+    final tabTitles = ['Adicionar', 'Carregamentos', 'Produtos'];
+    final icons = [Icons.add_circle, Icons.local_shipping, Icons.inventory_2];
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
-        title: const Text(
-          'Funcionário',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
         backgroundColor: Colors.blueAccent,
-        elevation: 4,
+        elevation: 6,
+        shadowColor: Colors.black26,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const SizedBox(width: 12),
+            const Icon(Icons.badge, color: Colors.white),
+            const SizedBox(width: 8),
+            const Text(
+              'Funcionário',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Sair',
-            onPressed: _logout,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.person, color: Colors.white70),
+                const SizedBox(width: 4),
+                Text(
+                  widget.user.name ?? 'Usuário',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  tooltip: 'Sair',
+                  onPressed: _confirmLogout,
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: tabs[_selectedIndex],
+
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        children: tabs,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onTabSelected,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Adicionar'),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Carregamentos'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produtos'),
-        ],
+
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, -1),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.blueAccent,
+          unselectedItemColor: Colors.grey,
+          currentIndex: _selectedIndex,
+          elevation: 10,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          onTap: _onTabSelected,
+          items: List.generate(
+            tabs.length,
+            (i) => BottomNavigationBarItem(
+              icon: Icon(icons[i]),
+              label: tabTitles[i],
+            ),
+          ),
+        ),
       ),
     );
   }

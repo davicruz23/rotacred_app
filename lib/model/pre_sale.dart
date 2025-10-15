@@ -11,6 +11,7 @@ class PreSale {
   final String? inspector; // <-- agora opcional
   final String? status; // <-- agora opcional
   final int? chargingId;
+  final double? totalPreSale;
 
   PreSale({
     this.id,
@@ -21,6 +22,7 @@ class PreSale {
     this.inspector, // não obrigatório
     this.status, // não obrigatório
     this.chargingId,
+    this.totalPreSale,
   });
 
   factory PreSale.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class PreSale {
       inspector: json['inspector'], // pode vir null
       status: json['status'], // pode vir null
       chargingId: json['chargingId'],
+      totalPreSale: json['totalPreSale']
     );
   }
 

@@ -1,3 +1,4 @@
 class Environment {
-  static const String apiBaseUrl = 'http://192.168.10.14:8081/api';
+  //static const String apiBaseUrl = 'https://api-gestao-n29u.onrender.com/api';
+  static const String apiBaseUrl = 'http://192.168.10.2:8081/api';
 }
