@@ -1,9 +1,13 @@
+import 'dart:ffi';
+
 class SaleCollectorDTO {
   final int id;
   final DateTime saleDate;
   final ClientDTO client;
   final List<ProductSaleDTO> products;
   final List<InstallmentDTO> installments;
+  final double? latitude;
+  final double? longitude;
 
   SaleCollectorDTO({
     required this.id,
@@ -11,6 +15,8 @@ class SaleCollectorDTO {
     required this.client,
     required this.products,
     required this.installments,
+    this.latitude,
+    this.longitude
   });
 
   factory SaleCollectorDTO.fromJson(Map<String, dynamic> json) {
@@ -24,6 +30,8 @@ class SaleCollectorDTO {
       installments: (json['installments'] as List)
           .map((e) => InstallmentDTO.fromJson(e))
           .toList(),
+      latitude: json['latitude'],
+      longitude: json['longitude']
     );
   }
 }
@@ -84,16 +92,10 @@ class ProductSaleDTO {
   final int id;
   final String nameProduct;
 
-  ProductSaleDTO({
-    required this.id,
-    required this.nameProduct,
-  });
+  ProductSaleDTO({required this.id, required this.nameProduct});
 
   factory ProductSaleDTO.fromJson(Map<String, dynamic> json) {
-    return ProductSaleDTO(
-      id: json['id'],
-      nameProduct: json['nameProduct'],
-    );
+    return ProductSaleDTO(id: json['id'], nameProduct: json['nameProduct']);
   }
 }
 

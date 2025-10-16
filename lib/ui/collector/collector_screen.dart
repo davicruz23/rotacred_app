@@ -4,6 +4,7 @@ import '../../model/dto/sale_collector_dto.dart';
 import '../../services/collector_service.dart';
 import '../../model/user.dart';
 import '../login_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CollectorScreen extends StatefulWidget {
   final User user;
@@ -265,11 +266,30 @@ class _CollectorScreenState extends State<CollectorScreen> {
                             "${sale.client.address.city} / ${sale.client.address.zipCode} "
                             "${sale.client.address.complement.isNotEmpty ? '- ${sale.client.address.complement}' : ''}",
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            "Parcelas",
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  "Localização: ${sale.latitude != null && sale.longitude != null ? "${sale.latitude}, ${sale.longitude}" : "Não disponível"}",
+                                ),
+                              ),
+                              if (sale.latitude != null &&
+                                  sale.longitude != null)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.map,
+                                    color: Colors.blue,
+                                  ),
+                                  tooltip: "Abrir no Maps",
+                                  onPressed: () => _openMaps(
+                                    sale.latitude!,
+                                    sale.longitude!,
+                                    context,
+                                  ),
+                                ),
+                            ],
                           ),
+
                           const SizedBox(height: 4),
                           ...sale.installments.asMap().entries.map((entry) {
                             final index = entry.key;
@@ -377,6 +397,69 @@ class _CollectorScreenState extends State<CollectorScreen> {
                 );
               },
             ),
+    );
+  }
+
+  Future<void> _openMaps(double lat, double lng, BuildContext context) async {
+    try {
+      // URL do Google Maps
+      final String googleMapsUrl =
+          "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
+
+      // URL alternativa para navegação
+      final String googleMapsDirections =
+          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng";
+
+      // Tentar abrir Google Maps
+      if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+        await launchUrl(
+          Uri.parse(googleMapsUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+      // Tentar abrir com geo: scheme como fallback
+      else if (await canLaunchUrl(Uri.parse("geo:$lat,$lng?q=$lat,$lng"))) {
+        await launchUrl(
+          Uri.parse("geo:$lat,$lng?q=$lat,$lng"),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+      // Tentar abrir Apple Maps no iOS
+      else if (Theme.of(context).platform == TargetPlatform.iOS) {
+        final String appleMapsUrl = "https://maps.apple.com/?ll=$lat,$lng";
+        if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+          await launchUrl(
+            Uri.parse(appleMapsUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          _showNoMapsAppDialog(context);
+        }
+      } else {
+        _showNoMapsAppDialog(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Erro ao abrir Maps: $e")));
+    }
+  }
+
+  void _showNoMapsAppDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Apps de Mapas Não Encontrados"),
+        content: const Text(
+          "Nenhum app de mapas foi encontrado no seu dispositivo.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
     );
   }
 }

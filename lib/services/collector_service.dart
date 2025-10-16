@@ -101,11 +101,7 @@ class CollectorService {
   Future<Uint8List> getPixQrCode(int installmentId) async {
     final url = Uri.parse('$baseUrl/collector/installment/$installmentId/pix');
     final response = await http.get(url);
-
-    print('retorno do QR: ${response}:::::::: ${installmentId}');
     if (response.statusCode == 200) {
-      print('status: ${response.statusCode}');
-      print('tamanho do body: ${response.bodyBytes.length}');
       return response.bodyBytes; // retorna a imagem PNG
     } else {
       throw Exception(
