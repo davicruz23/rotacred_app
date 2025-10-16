@@ -39,6 +39,16 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
 
   final Map<int, int> _selectedProducts = {};
 
+  final List<String> cidadesParaiba = [
+  'VÁRZEA','AREIA','ALAGOINHA','ALAGOA GRANDE','GALANTE',
+  'PEDREGAL','LAGOA SECA','SOLEDADE','CUBATI','SÃO VICENTE DO SERIDÓ',
+  'PEDRA LAVRADA','LAGOA DE ROÇA','ALAGOA NOVA','SOLÂNEA','INGÁ',
+  'SALGADO DE SÃO FÉLIX','QUEIMADAS','AROEIRAS','PILAR','ITATUBA',
+  'BOQUEIRÃO','GUARABIRA','PILÕEZINHOS','ITAPOROROCA','BELÉM',
+  'PIRPIRITUBA','ITABAIANA','CRUZ DO ESPÍRITO SANTO','JUAREZ TÁVORA',
+  'POCINHOS','ESPERANÇA','MONTEIRO','SUMÉ','BOA VISTA','CAMPINA GRANDE',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +65,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    // ========= Produtos =========
                     const Text(
                       "Seleção de Produtos",
                       style: TextStyle(
@@ -135,8 +144,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                       );
                     }).toList(),
                     const SizedBox(height: 20),
-
-                    // ========= Cliente =========
                     const Text(
                       "Dados do Cliente",
                       style: TextStyle(
@@ -166,7 +173,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                             const Divider(thickness: 1.2),
                             const SizedBox(height: 8),
 
-                            // Nome e CPF
                             Row(
                               children: [
                                 Expanded(
@@ -220,8 +226,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Endereço: Rua, Número, Complemento
                             Row(
                               children: [
                                 Expanded(
@@ -248,32 +252,86 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Cidade e Estado
                             Row(
                               children: [
                                 Expanded(
-                                  child: TextFormField(
-                                    controller: _cityCtrl,
-                                    decoration: const InputDecoration(
-                                      labelText: "Cidade",
-                                    ),
+                                  child: Autocomplete<String>(
+                                    optionsBuilder:
+                                        (TextEditingValue textEditingValue) {
+                                          if (textEditingValue.text.isEmpty) {
+                                            return cidadesParaiba;
+                                          }
+                                          return cidadesParaiba.where(
+                                            (cidade) =>
+                                                cidade.toLowerCase().contains(
+                                                  textEditingValue.text
+                                                      .toLowerCase(),
+                                                ),
+                                          );
+                                        },
+                                    onSelected: (String selection) {
+                                      _cityCtrl.text = selection;
+                                    },
+                                    fieldViewBuilder:
+                                        (
+                                          context,
+                                          controller,
+                                          focusNode,
+                                          onEditingComplete,
+                                        ) {
+                                          controller.text = _cityCtrl.text;
+                                          controller.selection =
+                                              TextSelection.fromPosition(
+                                                TextPosition(
+                                                  offset:
+                                                      controller.text.length,
+                                                ),
+                                              );
+                                          return TextFormField(
+                                            controller: controller,
+                                            focusNode: focusNode,
+                                            onEditingComplete:
+                                                onEditingComplete,
+                                            decoration: const InputDecoration(
+                                              labelText: "Cidade",
+                                            ),
+                                          );
+                                        },
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: TextFormField(
-                                    controller: _stateCtrl,
+                                  child: DropdownButtonFormField<String>(
+                                    value: _stateCtrl.text.isNotEmpty
+                                        ? _stateCtrl.text
+                                        : 'PB',
                                     decoration: const InputDecoration(
                                       labelText: "Estado",
                                     ),
+                                    items: [
+                                      'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES',
+                                      'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR',
+                                      'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+                                      'SP', 'SE', 'TO',
+                                    ].map((estado) {
+                                          return DropdownMenuItem(
+                                            value: estado,
+                                            child: Text(estado),
+                                          );
+                                        }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _stateCtrl.text =
+                                              val;
+                                        });
+                                      }
+                                    },
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Complemento
                             TextFormField(
                               controller: _complementCtrl,
                               decoration: const InputDecoration(
@@ -285,8 +343,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         ),
                       ),
                     ),
-
-                    // ========= Botão Finalizar =========
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
