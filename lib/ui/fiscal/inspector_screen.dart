@@ -18,6 +18,7 @@ class _InspectorScreenState extends State<InspectorScreen> {
   int _selectedIndex = 0;
   late final PageController _pageController;
   InspectorDTO? _inspector;
+  bool _rotating = false;
 
   @override
   void initState() {
@@ -50,22 +51,60 @@ class _InspectorScreenState extends State<InspectorScreen> {
     );
   }
 
-  void _logout() async {
+  Future<void> _logout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sair da conta'),
-        content: const Text('Tem certeza de que deseja sair?'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.logout_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Text(
+              'Sair da conta',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Tem certeza de que deseja sair?',
+          style: TextStyle(color: Colors.black54, fontSize: 15),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            icon: const Icon(Icons.cancel_outlined, color: Colors.grey),
+            label: const Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sair'),
+            icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
+            label: const Text(
+              'Sair',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -138,15 +177,36 @@ class _InspectorScreenState extends State<InspectorScreen> {
               children: [
                 //const Icon(Icons.person, color: Colors.white70),
                 const SizedBox(width: 4),
-                Text(
-                  widget.user.name ?? 'Usuário',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  tooltip: 'Sair',
-                  onPressed: _logout,
+                Row(
+                  children: [
+                    const Icon(Icons.person_outline, color: Colors.white70),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.user.name ?? 'Usuário',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTapDown: (_) => setState(() => _rotating = true),
+                      onTapUp: (_) {
+                        Future.delayed(const Duration(milliseconds: 150), () {
+                          setState(() => _rotating = false);
+                          _logout();
+                        });
+                      },
+                      child: AnimatedRotation(
+                        turns: _rotating ? 0.25 : 0.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

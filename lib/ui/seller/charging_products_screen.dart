@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../model/user.dart';
 import '../../model/charging.dart';
+import '../../model/pre_sale_item.dart';
 import '../seller/create_pre_sale_screen.dart';
 import '../../services/charging_service.dart';
 
@@ -19,11 +20,51 @@ class ChargingProductsScreen extends StatefulWidget {
 
 class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
   late Charging _charging;
+  final Map<int, int> _selectedProducts = {}; // productId -> quantity
+  List<PreSaleItem> _selectedItems = [];
 
   @override
   void initState() {
     super.initState();
     _charging = widget.charging;
+    _updateSelectedItems();
+  }
+
+  void _updateSelectedItems() {
+    _selectedItems = _charging.chargingItems
+        .where(
+          (item) =>
+              _selectedProducts[item.productId] != null &&
+              _selectedProducts[item.productId]! > 0,
+        )
+        .map(
+          (item) => PreSaleItem(
+            productId: item.productId,
+            productName: item.nameProduct,
+            quantity: _selectedProducts[item.productId]!,
+            unitPrice: item.priceProduct,
+          ),
+        )
+        .toList();
+  }
+
+  void _updateProductQuantity(int productId, int quantity) {
+    setState(() {
+      if (quantity <= 0) {
+        _selectedProducts.remove(productId);
+      } else {
+        _selectedProducts[productId] = quantity;
+      }
+      _updateSelectedItems();
+    });
+  }
+
+  // ✅ MÉTODO PARA RESETAR OS PRODUTOS SELECIONADOS
+  void _resetSelectedProducts() {
+    setState(() {
+      _selectedProducts.clear();
+      _selectedItems.clear();
+    });
   }
 
   Future<void> _reloadCharging() async {
@@ -31,6 +72,44 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
       widget.charging.id!,
     );
     setState(() => _charging = updated);
+  }
+
+  // ✅ MODIFICADO PARA AGUARDAR RESULTADO
+  Future<void> _navigateToCreatePreSale() async {
+    if (_selectedItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione pelo menos um produto para continuar'),
+        ),
+      );
+      return;
+    }
+
+    // Aguarda o resultado da tela de criação de pré-venda
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreatePreSaleScreen(
+          user: widget.user,
+          charging: _charging,
+          selectedItems: List.from(_selectedItems),
+        ),
+      ),
+    );
+
+    // ✅ SE A PRÉ-VENDA FOI CRIADA COM SUCESSO, RESETA OS PRODUTOS
+    if (result == true) {
+      _resetSelectedProducts();
+      await _reloadCharging(); // Recarrega o carregamento para atualizar estoques
+
+      // Mostra mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pré-venda criada com sucesso! Produtos resetados.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
@@ -41,14 +120,7 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
         elevation: 2,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.white,
-              child: Text(
-                widget.user.name.substring(0, 1).toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+            const Icon(Icons.inventory_2, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -63,73 +135,219 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
           ],
         ),
       ),
-      body: _charging.chargingItems.isEmpty
-          ? Center(
+      body: Column(
+        children: [
+          // Header com produtos selecionados
+          if (_selectedItems.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              color: Colors.green.shade50,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 80,
-                    color: Colors.grey.shade400,
+                  const Text(
+                    'Produtos Selecionados:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.green,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _selectedItems
+                        .map(
+                          (item) => Chip(
+                            label: Text(
+                              '${item.productName} (${item.quantity})',
+                            ),
+                            backgroundColor: Colors.green.shade100,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    'Nenhum produto disponível neste carregamento.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                    'Total: ${_selectedItems.length} produto(s) selecionado(s)',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green,
+                    ),
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _charging.chargingItems.length,
-              itemBuilder: (context, index) {
-                final item = _charging.chargingItems[index];
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    title: Text(
-                      item.nameProduct,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      "Marca: ${item.brand} | Qtd disponível: ${item.quantity}",
-                    ),
-                    leading: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: Colors.blue,
-                    ),
-                  ),
-                );
-              },
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green,
-        icon: const Icon(Icons.shopping_cart),
-        label: const Text("Iniciar Pré-venda"),
-        onPressed: () async {
-          final created = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  CreatePreSaleScreen(user: widget.user, charging: _charging),
-            ),
-          );
 
-          if (created == true) {
-            await _reloadCharging();
-          }
-        },
+          // Lista de produtos
+          Expanded(
+            child: _charging.chargingItems.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 80,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nenhum produto disponível neste carregamento.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _charging.chargingItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _charging.chargingItems[index];
+                      final quantity = _selectedProducts[item.productId] ?? 0;
+
+                      return Card(
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.shopping_cart_outlined,
+                                color: Colors.blue,
+                                size: 32,
+                              ),
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.nameProduct,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Marca: ${item.brand}",
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Text(
+                                      "R\$ ${item.priceProduct.toStringAsFixed(2)} • Disponível: ${item.quantity}",
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Controles de quantidade
+                              Column(
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.remove_circle,
+                                          color: quantity > 0
+                                              ? Colors.red
+                                              : Colors.grey,
+                                        ),
+                                        onPressed: quantity > 0
+                                            ? () => _updateProductQuantity(
+                                                item.productId,
+                                                quantity - 1,
+                                              )
+                                            : null,
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: quantity > 0
+                                              ? Colors.blue.shade50
+                                              : Colors.grey.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          quantity.toString(),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: quantity > 0
+                                                ? Colors.blue
+                                                : Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.add_circle,
+                                          color: quantity < item.quantity
+                                              ? Colors.green
+                                              : Colors.grey,
+                                        ),
+                                        onPressed: quantity < item.quantity
+                                            ? () => _updateProductQuantity(
+                                                item.productId,
+                                                quantity + 1,
+                                              )
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                  if (quantity > 0)
+                                    Text(
+                                      'Total: R\$ ${(quantity * item.priceProduct).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: _selectedItems.isNotEmpty ? Colors.green : Colors.grey,
+        icon: const Icon(Icons.shopping_cart_checkout),
+        label: Text(
+          _selectedItems.isNotEmpty
+              ? "Continuar (${_selectedItems.length})"
+              : "Selecionar Produtos",
+        ),
+        onPressed: _navigateToCreatePreSale,
       ),
     );
   }

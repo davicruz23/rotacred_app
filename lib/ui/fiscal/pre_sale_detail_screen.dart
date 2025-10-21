@@ -3,7 +3,7 @@ import '../../model/pre_sale.dart';
 import '../../services/inspector_service.dart';
 import 'package:geolocator/geolocator.dart';
 
-class PreSaleDetailScreen extends StatelessWidget {
+class PreSaleDetailScreen extends StatefulWidget {
   final PreSale preSale;
   final int inspectorId;
 
@@ -12,6 +12,21 @@ class PreSaleDetailScreen extends StatelessWidget {
     required this.preSale,
     required this.inspectorId,
   });
+
+  @override
+  State<PreSaleDetailScreen> createState() => _PreSaleDetailScreenState();
+}
+
+class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
+  bool _productsExpanded = true; // Controla se a sanfona está aberta ou fechada
+
+  // Método para calcular o valor total
+  double get _totalValue {
+    return widget.preSale.items.fold(
+      0.0,
+      (total, item) => total + (item.quantity * item.unitPrice),
+    );
+  }
 
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled;
@@ -59,7 +74,7 @@ class PreSaleDetailScreen extends StatelessWidget {
               radius: 18,
               backgroundColor: Colors.white,
               child: Text(
-                preSale.seller.nomeSeller.substring(0, 1).toUpperCase(),
+                widget.preSale.seller.nomeSeller.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.blueAccent,
@@ -69,7 +84,7 @@ class PreSaleDetailScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Pré-venda #${preSale.id}',
+                'Pré-venda #${widget.preSale.id}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -88,9 +103,9 @@ class PreSaleDetailScreen extends StatelessWidget {
             // Informações básicas
             _highlightInfoCard(
               "Data:",
-              "${preSale.preSaleDate}",
+              "${widget.preSale.preSaleDate}",
               "Vendedor:",
-              preSale.seller.nomeSeller,
+              widget.preSale.seller.nomeSeller,
             ),
 
             const SizedBox(height: 20),
@@ -100,49 +115,22 @@ class PreSaleDetailScreen extends StatelessWidget {
               icon: Icons.person,
               title: "Dados do Cliente",
               children: [
-                _infoRow("Nome:", preSale.client.name),
-                _infoRow("CPF:", preSale.client.cpf),
-                _infoRow("Telefone:", preSale.client.phone),
+                _infoRow("Nome:", widget.preSale.client.name),
+                _infoRow("CPF:", widget.preSale.client.cpf),
+                _infoRow("Telefone:", widget.preSale.client.phone),
                 const SizedBox(height: 8),
                 Text(
-                  "Endereço: ${preSale.client.address.street}, ${preSale.client.address.number}, "
-                  "${preSale.client.address.city} - ${preSale.client.address.state}",
+                  "Endereço: ${widget.preSale.client.address.street}, ${widget.preSale.client.address.number}, "
+                  "${widget.preSale.client.address.city} - ${widget.preSale.client.address.state}",
                   style: const TextStyle(fontSize: 14, color: Colors.black87),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Destaque: Produtos
-            _highlightCard(
-              icon: Icons.shopping_cart,
-              title: "Produtos",
-              children: preSale.items
-                  .map(
-                    (item) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.check_circle_outline,
-                        color: Colors.blueAccent,
-                      ),
-                      title: Text(
-                        item.productName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                      trailing: Text(
-                        "x${item.quantity}",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
+            // Destaque: Produtos - AGORA COM SANFONA
+            _highlightProductsCard(),
+
             const SizedBox(height: 30),
 
             // Botões de ação
@@ -153,26 +141,200 @@ class PreSaleDetailScreen extends StatelessWidget {
     );
   }
 
-  // Cartão básico para info rápida
-  // Widget _infoCard(String label1, String value1, String label2, String value2) {
-  //   return Card(
-  //     elevation: 3,
-  //     shadowColor: Colors.black12,
-  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(16.0),
-  //       child: Column(
-  //         children: [
-  //           _infoRow(label1, value1),
-  //           const SizedBox(height: 8),
-  //           _infoRow(label2, value2),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
+  Widget _highlightProductsCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 6,
+      shadowColor: Colors.black26,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.blue.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cabeçalho clicável da sanfona
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _productsExpanded = !_productsExpanded;
+                });
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.shopping_cart, color: Colors.blueAccent),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Produtos Selecionados",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _productsExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: Colors.blueAccent,
+                    size: 24,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(thickness: 1.2),
 
-  // Cartão de destaque (cliente ou produtos)
+            // Conteúdo da sanfona (só mostra quando expandido)
+            if (_productsExpanded) ...[
+              const SizedBox(height: 8),
+
+              // Lista de produtos
+              ...widget.preSale.items.map(
+                (item) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.shade100),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Ícone do produto
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.inventory_2_outlined,
+                          color: Colors.blue.shade600,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.productName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  "Quantidade: ${item.quantity}",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "R\$ ${item.unitPrice.toStringAsFixed(2)} un",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Valor total do item
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          "R\$ ${(item.quantity * item.unitPrice).toStringAsFixed(2)}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+            ],
+
+            // Linha do valor total (sempre visível)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade300),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Valor Total:",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  Text(
+                    "R\$ ${_totalValue.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cartão de destaque (cliente)
   Widget _highlightCard({
     required IconData icon,
     required String title,
@@ -324,7 +486,7 @@ class PreSaleDetailScreen extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await InspectorService().rejectPreSale(preSale.id!);
+                await InspectorService().rejectPreSale(widget.preSale.id!);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Pré-venda recusada")),
                 );
@@ -346,118 +508,233 @@ class PreSaleDetailScreen extends StatelessWidget {
     String paymentMethod = "CASH";
     int installments = 0;
     double? cashPaid;
+    bool _isApproving = false;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
+          return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
-            title: Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text("Aprovar venda"),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: paymentMethod,
-                    items: const [
-                      DropdownMenuItem(value: "CASH", child: Text("Dinheiro")),
-                      DropdownMenuItem(
-                        value: "PARCEL",
-                        child: Text("Parcelado"),
+            elevation: 10,
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Título com ícone e estilo
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.green, Colors.lightGreen],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      DropdownMenuItem(value: "CREDIT", child: Text("Crédito")),
-                      DropdownMenuItem(value: "DEBIT", child: Text("Débito")),
-                      DropdownMenuItem(value: "PIX", child: Text("PIX")),
-                    ],
-                    onChanged: (val) =>
-                        setState(() => paymentMethod = val ?? "CASH"),
-                    decoration: const InputDecoration(
-                      labelText: "Método de pagamento",
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  if (paymentMethod == "CASH") ...[
-                    TextFormField(
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: "Valor pago à vista",
-                        prefixText: "R\$ ",
-                      ),
-                      onChanged: (val) {
-                        setState(
-                          () => cashPaid = double.tryParse(
-                            val.replaceAll(',', '.'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                            size: 28,
                           ),
-                        );
-                      },
+                          SizedBox(width: 8),
+                          Text(
+                            "Aprovar venda",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                  ],
+                    const SizedBox(height: 20),
 
-                  TextFormField(
-                    initialValue: installments.toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Parcelas (se houver)",
+                    // Método de pagamento
+                    DropdownButtonFormField<String>(
+                      initialValue: paymentMethod,
+                      items: const [
+                        DropdownMenuItem(
+                          value: "CASH",
+                          child: Text("Dinheiro"),
+                        ),
+                        DropdownMenuItem(
+                          value: "PARCEL",
+                          child: Text("Parcelado"),
+                        ),
+                        DropdownMenuItem(
+                          value: "CREDIT",
+                          child: Text("Crédito"),
+                        ),
+                        DropdownMenuItem(value: "DEBIT", child: Text("Débito")),
+                        DropdownMenuItem(value: "PIX", child: Text("PIX")),
+                      ],
+                      onChanged: (val) {
+                        if (val == null) return;
+                        setState(() {
+                          paymentMethod = val;
+                          cashPaid = null;
+                          installments = 0;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        labelText: "Método de pagamento",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
                     ),
-                    onChanged: (val) =>
-                        setState(() => installments = int.tryParse(val) ?? 0),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // Dinheiro à vista
+                    if (paymentMethod == "CASH") ...[
+                      TextFormField(
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: "Valor pago em dinheiro",
+                          prefixText: "R\$ ",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            cashPaid = double.tryParse(
+                              val.replaceAll(',', '.'),
+                            );
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Parcelas
+                    if (paymentMethod == "PARCEL" ||
+                        paymentMethod == "CASH") ...[
+                      TextFormField(
+                        initialValue: installments.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: "Parcelas (se houver)",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            installments = int.tryParse(val) ?? 0;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Ações
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.grey),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text("Cancelar"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _isApproving
+                                ? null
+                                : () async {
+                                    setState(() => _isApproving = true);
+                                    try {
+                                      final pos = await _getCurrentLocation();
+
+                                      await InspectorService().approvePreSale(
+                                        preSaleId: widget.preSale.id!,
+                                        inspectorId: widget.inspectorId,
+                                        paymentMethod: paymentMethod,
+                                        installments: installments,
+                                        cashPaid: cashPaid,
+                                        latitude: pos.latitude,
+                                        longitude: pos.longitude,
+                                      );
+
+                                      Navigator.pop(context);
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Pré-venda aprovada ✅"),
+                                        ),
+                                      );
+
+                                      Navigator.pop(context, true);
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text("Erro ao aprovar: $e"),
+                                        ),
+                                      );
+                                    } finally {
+                                      setState(() => _isApproving = false);
+                                    }
+                                  },
+                            child: _isApproving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text("Aprovar"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancelar"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                onPressed: () async {
-                  try {
-                    // ✅ 1. Captura localização
-                    final pos = await _getCurrentLocation();
-
-                    // ✅ 2. Envia tudo ao backend
-                    await InspectorService().approvePreSale(
-                      preSaleId: preSale.id!,
-                      inspectorId: inspectorId,
-                      paymentMethod: paymentMethod,
-                      installments: installments,
-                      cashPaid: cashPaid,
-                      latitude: pos.latitude,
-                      longitude: pos.longitude,
-                    );
-
-                    // ✅ 3. Fecha o diálogo só depois do sucesso
-                    Navigator.pop(context);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Pré-venda aprovada ✅")),
-                    );
-
-                    Navigator.pop(context, true);
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Erro ao aprovar: $e")),
-                    );
-                  }
-                },
-                child: const Text("Aprovar"),
-              ),
-            ],
           );
         },
       ),

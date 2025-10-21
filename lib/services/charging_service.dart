@@ -27,11 +27,10 @@ class ChargingService {
   }
 
   Future<List<Charging>> getChargings() async {
-    final response = await http.get(Uri.parse('$baseUrl/charging/all'));
+    final response = await http.get(Uri.parse('$baseUrl/charging/current'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      print('retornou isso: $data');
       if (data == null) return [];
 
       return (data as List)

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../model/user.dart';
 import '../../model/charging.dart';
 import '../login_screen.dart';
-import 'select_charging_tab.dart';
 import 'charging_products_screen.dart';
 import 'create_pre_sale_screen.dart';
+import '../../services/charging_service.dart';
 
 class SellerScreen extends StatefulWidget {
   final User user;
@@ -15,140 +15,177 @@ class SellerScreen extends StatefulWidget {
 }
 
 class _SellerScreenState extends State<SellerScreen> {
-  int _currentIndex = 0;
-  Charging? _selectedCharging;
-
-  void _onChargingSelected(Charging charging) {
-    setState(() {
-      _selectedCharging = charging;
-      _currentIndex = 1;
-    });
-  }
-
-  void _logout() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
+  Charging? _currentCharging;
+  bool _loading = true;
+  bool _rotating = false;
 
   @override
-  Widget build(BuildContext context) {
-    final tabs = <Widget>[
-      SelectChargingTab(
-        user: widget.user,
-        onChargingSelected: _onChargingSelected,
-      ),
-      _selectedCharging != null
-          ? ChargingProductsScreen(
-              user: widget.user,
-              charging: _selectedCharging!,
-            )
-          : _noChargingSelectedWidget(),
-    ];
+  void initState() {
+    super.initState();
+    _loadCurrentCharging();
+  }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blue.shade700,
-        elevation: 2,
+  Future<void> _loadCurrentCharging() async {
+    try {
+      final chargings = await ChargingService().getChargings();
+      setState(() {
+        _currentCharging = chargings.isNotEmpty ? chargings.first : null;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar carregamento: $e')),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.white,
-              child: Text(
-                widget.user.name.substring(0, 1).toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Vendedor - ${widget.user.name}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
+          children: const [
+            Icon(Icons.logout_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text(
+              'Sair da conta',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
+        content: const Text(
+          'Deseja realmente sair da conta?',
+          style: TextStyle(color: Colors.black54, fontSize: 15),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sair',
-            onPressed: _logout,
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
-        ],
-      ),
-      body: tabs[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.blue.shade700,
-        onTap: (index) {
-          if (index == 1 && _selectedCharging == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Selecione um carregamento primeiro.'),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
-            );
-            setState(() => _currentIndex = 0);
-            return;
-          }
-          setState(() => _currentIndex = index);
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'Carregamentos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Produtos',
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sair'),
           ),
         ],
       ),
-      floatingActionButton: _selectedCharging != null
-          ? FloatingActionButton.extended(
-              backgroundColor: Colors.green,
-              icon: const Icon(Icons.add_shopping_cart),
-              label: const Text('Iniciar Pré-venda'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CreatePreSaleScreen(
+    );
+
+    if (shouldLogout == true && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          'Vendedor - ${widget.user.name}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          GestureDetector(
+            onTapDown: (_) => setState(() => _rotating = true),
+            onTapUp: (_) {
+              Future.delayed(const Duration(milliseconds: 150), () {
+                setState(() => _rotating = false);
+                _logout();
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: AnimatedRotation(
+                turns: _rotating ? 0.25 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.logout_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+              : _currentCharging != null
+                  ? ChargingProductsScreen(
                       user: widget.user,
-                      charging: _selectedCharging!,
-                    ),
-                  ),
-                );
-              },
-            )
-          : null,
+                      charging: _currentCharging!,
+                    )
+                  : _noChargingFoundWidget(),
+        ),
+      ),
+      // REMOVIDO O FLOATING ACTION BUTTON DAQUI - AGORA ESTÁ NA ChargingProductsScreen
     );
   }
 
-  Widget _noChargingSelectedWidget() {
+  Widget _noChargingFoundWidget() {
     return Center(
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.info_outline, size: 60, color: Colors.blue.shade300),
-              const SizedBox(height: 16),
-              const Text(
-                'Nenhum carregamento selecionado.\nEscolha um carregamento na aba Carregamentos.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15),
-              ),
-            ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Card(
+          color: Colors.white,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 64,
+                  color: Colors.blue.shade700,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Nenhum carregamento ativo encontrado.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Crie um novo carregamento no sistema para começar.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 14),
+                ),
+              ],
+            ),
           ),
         ),
       ),
