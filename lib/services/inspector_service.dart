@@ -16,7 +16,7 @@ class InspectorService {
 
     if (response.statusCode == 200) {
       final List<dynamic> body = json.decode(response.body);
-      //print('Retorno da API: ${response.body}');
+      print('Retorno da API: ${response.body}');
       return body.map((json) => PreSale.fromJson(json)).toList();
     } else {
       throw Exception("Erro ao buscar pré-vendas pendentes");

@@ -171,28 +171,28 @@ class _ListChargingsTabState extends State<ListChargingsTab> {
                         ),
                       ),
                       const Divider(thickness: 0.7),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.check, color: Colors.white),
-                          label: const Text(
-                            'Selecionar este carregamento',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          onPressed: () => widget.onChargingSelected(charging),
-                        ),
-                      ),
+                      // SizedBox(
+                      //   width: double.infinity,
+                      //   child: ElevatedButton.icon(
+                      //     style: ElevatedButton.styleFrom(
+                      //       backgroundColor: Colors.blueAccent,
+                      //       shape: RoundedRectangleBorder(
+                      //         borderRadius: BorderRadius.circular(10),
+                      //       ),
+                      //       padding: const EdgeInsets.symmetric(vertical: 12),
+                      //     ),
+                      //     icon: const Icon(Icons.check, color: Colors.white),
+                      //     label: const Text(
+                      //       'Selecionar este carregamento',
+                      //       style: TextStyle(
+                      //         color: Colors.white,
+                      //         fontWeight: FontWeight.w600,
+                      //         fontSize: 15,
+                      //       ),
+                      //     ),
+                      //     onPressed: () => widget.onChargingSelected(charging),
+                      //   ),
+                      // ),
                     ],
                   ),
                 );

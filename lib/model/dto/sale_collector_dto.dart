@@ -1,4 +1,4 @@
-import 'dart:ffi';
+import 'package:intl/intl.dart';
 
 class SaleCollectorDTO {
   final int id;
@@ -16,13 +16,21 @@ class SaleCollectorDTO {
     required this.products,
     required this.installments,
     this.latitude,
-    this.longitude
+    this.longitude,
   });
 
   factory SaleCollectorDTO.fromJson(Map<String, dynamic> json) {
+    DateTime parsedSaleDate;
+
+    try {
+      parsedSaleDate = DateTime.parse(json['saleDate']);
+    } catch (_) {
+      parsedSaleDate = DateFormat('dd/MM/yyyy').parse(json['saleDate']);
+    }
+
     return SaleCollectorDTO(
       id: json['id'],
-      saleDate: DateTime.parse(json['saleDate']),
+      saleDate: parsedSaleDate,
       client: ClientDTO.fromJson(json['client']),
       products: (json['products'] as List)
           .map((e) => ProductSaleDTO.fromJson(e))
@@ -31,7 +39,7 @@ class SaleCollectorDTO {
           .map((e) => InstallmentDTO.fromJson(e))
           .toList(),
       latitude: json['latitude'],
-      longitude: json['longitude']
+      longitude: json['longitude'],
     );
   }
 }
@@ -113,9 +121,17 @@ class InstallmentDTO {
   });
 
   factory InstallmentDTO.fromJson(Map<String, dynamic> json) {
+    DateTime parsedDueDate;
+
+    try {
+      parsedDueDate = DateTime.parse(json['dueDate']);
+    } catch (_) {
+      parsedDueDate = DateFormat('dd/MM/yyyy').parse(json['dueDate']);
+    }
+
     return InstallmentDTO(
       id: json['id'],
-      dueDate: DateTime.parse(json['dueDate']),
+      dueDate: parsedDueDate,
       amount: (json['amount'] as num).toDouble(),
       paid: json['paid'],
     );

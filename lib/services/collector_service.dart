@@ -3,21 +3,27 @@ import 'package:http/http.dart' as http;
 import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/dto/collector_dto.dart';
 import '../model/dto/sale_collector_dto.dart';
-import '../model//dto/collection_attempt_dto.dart';
 import 'dart:typed_data';
 
 class CollectorService {
   final String baseUrl = Environment.apiBaseUrl;
 
-  Future<List<SaleCollectorDTO>> getSalesForCollector(int collectorId) async {
+  Future<Map<String, List<SaleCollectorDTO>>> getSalesForCollector(
+    int collectorId,
+  ) async {
     final url = Uri.parse('$baseUrl/collector/$collectorId/sales');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       print('cobranças: ${response.body}');
-      final List<dynamic> data = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonDecode(response.body);
 
-      return data.map((json) => SaleCollectorDTO.fromJson(json)).toList();
+      return data.map((city, salesJson) {
+        final salesList = (salesJson as List)
+            .map((json) => SaleCollectorDTO.fromJson(json))
+            .toList();
+        return MapEntry(city, salesList);
+      });
     } else {
       throw Exception(
         'Erro ao buscar vendas para cobrador ${response.statusCode}',

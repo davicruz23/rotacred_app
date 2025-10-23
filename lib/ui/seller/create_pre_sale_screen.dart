@@ -210,8 +210,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                     ),
 
                     const SizedBox(height: 20),
-
-                    // SEÇÃO DE DADOS DO CLIENTE
                     const Text(
                       "Dados do Cliente",
                       style: TextStyle(
@@ -232,7 +230,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Nome e CPF
                             Row(
                               children: [
                                 Expanded(
@@ -270,8 +267,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Telefone e CEP
                             Row(
                               children: [
                                 Expanded(
@@ -310,8 +305,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Rua e Número
                             Row(
                               children: [
                                 Expanded(
@@ -482,7 +475,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
 
                     const SizedBox(height: 20),
 
-                    // BOTÃO DE CONFIRMAR
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -546,7 +538,6 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
         const SnackBar(content: Text("Pré-venda criada com sucesso!")),
       );
 
-      // ✅ RETORNA TRUE PARA INDICAR QUE A PRÉ-VENDA FOI CRIADA
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(

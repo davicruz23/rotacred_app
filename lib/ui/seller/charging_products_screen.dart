@@ -4,6 +4,8 @@ import '../../model/charging.dart';
 import '../../model/pre_sale_item.dart';
 import '../seller/create_pre_sale_screen.dart';
 import '../../services/charging_service.dart';
+import 'package:intl/intl.dart';
+
 
 class ChargingProductsScreen extends StatefulWidget {
   final User user;
@@ -20,7 +22,7 @@ class ChargingProductsScreen extends StatefulWidget {
 
 class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
   late Charging _charging;
-  final Map<int, int> _selectedProducts = {}; // productId -> quantity
+  final Map<int, int> _selectedProducts = {}; 
   List<PreSaleItem> _selectedItems = [];
 
   @override
@@ -59,7 +61,6 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
     });
   }
 
-  // ✅ MÉTODO PARA RESETAR OS PRODUTOS SELECIONADOS
   void _resetSelectedProducts() {
     setState(() {
       _selectedProducts.clear();
@@ -73,8 +74,6 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
     );
     setState(() => _charging = updated);
   }
-
-  // ✅ MODIFICADO PARA AGUARDAR RESULTADO
   Future<void> _navigateToCreatePreSale() async {
     if (_selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -85,7 +84,6 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
       return;
     }
 
-    // Aguarda o resultado da tela de criação de pré-venda
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -100,7 +98,7 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
     // ✅ SE A PRÉ-VENDA FOI CRIADA COM SUCESSO, RESETA OS PRODUTOS
     if (result == true) {
       _resetSelectedProducts();
-      await _reloadCharging(); // Recarrega o carregamento para atualizar estoques
+      await _reloadCharging();
 
       // Mostra mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +122,7 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                _charging.description,
+                ' ${_charging.description} - ${_charging.data}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -137,50 +135,6 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
       ),
       body: Column(
         children: [
-          // Header com produtos selecionados
-          if (_selectedItems.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: Colors.green.shade50,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Produtos Selecionados:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: _selectedItems
-                        .map(
-                          (item) => Chip(
-                            label: Text(
-                              '${item.productName} (${item.quantity})',
-                            ),
-                            backgroundColor: Colors.green.shade100,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Total: ${_selectedItems.length} produto(s) selecionado(s)',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Lista de produtos
           Expanded(
             child: _charging.chargingItems.isEmpty
                 ? Center(
@@ -257,8 +211,6 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
                                   ],
                                 ),
                               ),
-
-                              // Controles de quantidade
                               Column(
                                 children: [
                                   Row(

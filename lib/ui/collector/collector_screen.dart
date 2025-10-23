@@ -18,6 +18,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
   bool _isLoading = true;
   List<SaleCollectorDTO> _sales = [];
   int? _collectorId;
+  Map<String, List<SaleCollectorDTO>> _salesByCity = {};
 
   @override
   void initState() {
@@ -31,13 +32,16 @@ class _CollectorScreenState extends State<CollectorScreen> {
       final collector = await CollectorService().getCollectorByUserId(
         widget.user.id,
       );
-      final sales = await CollectorService().getSalesForCollector(
+      final salesByCity = await CollectorService().getSalesForCollector(
         collector.idCollector,
       );
 
       setState(() {
         _collectorId = collector.idCollector;
-        _sales = sales;
+        _salesByCity = salesByCity;
+        _sales = salesByCity.values
+            .expand((list) => list)
+            .toList(); // se ainda quiser a lista completa
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -379,7 +383,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
                 ],
               ),
             )
-          : _sales.isEmpty
+          : _salesByCity.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -398,23 +402,37 @@ class _CollectorScreenState extends State<CollectorScreen> {
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "As vendas aparecerão aqui quando atribuídas",
-                    style: TextStyle(color: Colors.grey),
-                  ),
                 ],
               ),
             )
           : RefreshIndicator(
               onRefresh: _fetchCollectorSales,
-              child: ListView.builder(
+              child: ListView(
                 padding: const EdgeInsets.all(16),
-                itemCount: _sales.length,
-                itemBuilder: (context, index) {
-                  final sale = _sales[index];
-                  return _buildSaleCard(sale);
-                },
+                children: _salesByCity.entries.map((entry) {
+                  final city = entry.key;
+                  final sales = entry.value;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 3,
+                    child: ExpansionTile(
+                      title: Text(
+                        city,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      children: sales
+                          .map((sale) => _buildSaleCard(sale))
+                          .toList(),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
     );

@@ -526,7 +526,7 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Título com ícone e estilo
+                    // Título
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
@@ -684,10 +684,17 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                                     try {
                                       final pos = await _getCurrentLocation();
 
+                                      String finalPaymentMethod = paymentMethod;
+                                      if (paymentMethod == "CASH" &&
+                                          (installments > 0 &&
+                                              (cashPaid ?? 0) > 0)) {
+                                        finalPaymentMethod = "PARCEL";
+                                      }
+
                                       await InspectorService().approvePreSale(
                                         preSaleId: widget.preSale.id!,
                                         inspectorId: widget.inspectorId,
-                                        paymentMethod: paymentMethod,
+                                        paymentMethod: finalPaymentMethod,
                                         installments: installments,
                                         cashPaid: cashPaid,
                                         latitude: pos.latitude,
