@@ -3,7 +3,6 @@ import '../../model/user.dart';
 import '../../model/charging.dart';
 import '../login_screen.dart';
 import 'charging_products_screen.dart';
-import 'create_pre_sale_screen.dart';
 import '../../services/charging_service.dart';
 
 class SellerScreen extends StatefulWidget {
@@ -141,14 +140,13 @@ class _SellerScreenState extends State<SellerScreen> {
                   child: CircularProgressIndicator(color: Colors.white),
                 )
               : _currentCharging != null
-                  ? ChargingProductsScreen(
-                      user: widget.user,
-                      charging: _currentCharging!,
-                    )
-                  : _noChargingFoundWidget(),
+              ? ChargingProductsScreen(
+                  user: widget.user,
+                  charging: _currentCharging!,
+                )
+              : _noChargingFoundWidget(),
         ),
       ),
-      // REMOVIDO O FLOATING ACTION BUTTON DAQUI - AGORA ESTÁ NA ChargingProductsScreen
     );
   }
 

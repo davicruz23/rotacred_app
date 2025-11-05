@@ -40,73 +40,6 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
     );
   }
 
-  Future<void> _confirmLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.logout_rounded, color: Colors.redAccent),
-            SizedBox(width: 10),
-            Text(
-              'Sair da conta',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Tem certeza de que deseja sair?',
-          style: TextStyle(color: Colors.black54, fontSize: 15),
-        ),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context, false),
-            icon: const Icon(Icons.cancel_outlined, color: Colors.grey),
-            label: const Text(
-              'Cancelar',
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-            ),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
-            label: const Text(
-              'Sair',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final tabs = [
@@ -156,7 +89,7 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
                   const Icon(Icons.person_outline, color: Colors.white70),
                   const SizedBox(width: 8),
                   Text(
-                    widget.user.name ?? 'Usuário',
+                    widget.user.name,
                     style: const TextStyle(color: Colors.white70, fontSize: 15),
                   ),
                   const SizedBox(width: 8),
@@ -184,7 +117,6 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
         ),
       ),
 
-      // Usamos PageView normalmente (sem key/AnimatedSwitcher que recriam o widget)
       body: PageView(
         controller: _pageController,
         physics: const BouncingScrollPhysics(),
@@ -265,5 +197,72 @@ class _FuncionarioScreenState extends State<FuncionarioScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.logout_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Text(
+              'Sair da conta',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Tem certeza de que deseja sair?',
+          style: TextStyle(color: Colors.black54, fontSize: 15),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context, false),
+            icon: const Icon(Icons.cancel_outlined, color: Colors.grey),
+            label: const Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+            ),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
+            label: const Text(
+              'Sair',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 }

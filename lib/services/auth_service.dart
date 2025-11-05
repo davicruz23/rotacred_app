@@ -10,32 +10,43 @@ class AuthService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'cpf': cpf,
-        'password': password,
-      }),
+      body: jsonEncode({'cpf': cpf, 'password': password}),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      // Salvar token no dispositivo
+      // Salva o token ou user
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', data['token']);
+      await prefs.setString('user', jsonEncode(data));
 
       return data;
     } else {
-      throw Exception('Erro no login: ${response.body}');
+      // Tenta extrair o campo "message" do JSON retornado
+      try {
+        final errorData = jsonDecode(response.body);
+        if (errorData is Map && errorData.containsKey('message')) {
+          throw Exception(errorData['message']);
+        } else {
+          throw Exception('Erro no login.');
+        }
+      } catch (_) {
+        throw Exception('Erro no login.');
+      }
     }
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await prefs.remove('user');
   }
 
-  Future<String?> getToken() async {
+  Future<Map<String, dynamic>?> getUser() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+    final userString = prefs.getString('user');
+    if (userString != null) {
+      return jsonDecode(userString);
+    }
+    return null;
   }
 }

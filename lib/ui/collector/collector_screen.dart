@@ -16,14 +16,646 @@ class CollectorScreen extends StatefulWidget {
 
 class _CollectorScreenState extends State<CollectorScreen> {
   bool _isLoading = true;
-  List<SaleCollectorDTO> _sales = [];
   int? _collectorId;
   Map<String, List<SaleCollectorDTO>> _salesByCity = {};
+  bool _rotating = false;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
     _fetchCollectorSales();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Future<void> _logout() async {
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.logout_rounded, color: Colors.redAccent),
+              SizedBox(width: 8),
+              Text(
+                'Sair da conta',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Deseja realmente sair da conta?',
+            style: TextStyle(color: Colors.black54, fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sair'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldLogout == true && context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        elevation: 4,
+        title: Row(
+          children: [
+            //const Icon(Icons.attach_money_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            const Text(
+              'Cobrador',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                const Icon(Icons.person_outline, color: Colors.white70),
+                const SizedBox(width: 8),
+                Text(
+                  widget.user.name,
+                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                const SizedBox(width: 12),
+
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _refreshing = true),
+                  onTapUp: (_) {
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      setState(() => _refreshing = false);
+                      _fetchCollectorSales();
+                    });
+                  },
+                  child: AnimatedRotation(
+                    turns: _refreshing ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _rotating = true),
+                  onTapUp: (_) {
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      setState(() => _rotating = false);
+                      _logout();
+                    });
+                  },
+                  child: AnimatedRotation(
+                    turns: _rotating ? 0.25 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+
+      body: _isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    "Carregando vendas...",
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
+              ),
+            )
+          : _salesByCity.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Nenhuma venda encontrada",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _fetchCollectorSales,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: _salesByCity.entries.map((entry) {
+                  final city = entry.key;
+                  final sales = entry.value;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 3,
+                    child: ExpansionTile(
+                      title: Text(
+                        city,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      children: sales
+                          .map((sale) => _buildSaleCard(sale))
+                          .toList(),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildSaleCard(SaleCollectorDTO sale) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      elevation: 6,
+      shadowColor: Colors.blue.withOpacity(0.2),
+      margin: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade50, Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 10,
+          ),
+          leading: CircleAvatar(
+            radius: 22,
+            backgroundColor: Colors.blue.shade100,
+            child: Text(
+              sale.client.name.substring(0, 1).toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+          title: Text(
+            sale.client.name,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+          subtitle: Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 14,
+                color: Colors.grey,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                "Venda: ${sale.saleDate.toLocal().toString().split(' ')[0]}",
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+          trailing: _buildStatusBadge(sale),
+          children: [
+            const Divider(thickness: 1, color: Color(0xFFE0E0E0)),
+            const SizedBox(height: 4),
+            _buildClientInfo(sale),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(10),
+              child: _buildInstallments(sale),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(SaleCollectorDTO sale) {
+    final paidCount = sale.installments.where((inst) => inst.paid).length;
+    final totalCount = sale.installments.length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: paidCount == totalCount
+            ? Colors.green.shade100
+            : const Color.fromARGB(255, 240, 237, 235),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: paidCount == totalCount
+              ? Colors.green
+              : const Color.fromARGB(255, 97, 95, 93),
+        ),
+      ),
+      child: Text(
+        "$paidCount/$totalCount",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: paidCount == totalCount
+              ? Colors.green
+              : const Color.fromARGB(255, 97, 95, 93),
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientInfo(SaleCollectorDTO sale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Informações do Cliente",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.blue,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildInfoRow(Icons.person, "CPF", sale.client.cpf),
+        _buildInfoRow(Icons.phone, "Telefone", sale.client.phone),
+        _buildInfoRow(
+          Icons.location_on,
+          "Endereço",
+          "${sale.client.address.street}, nº ${sale.client.address.number}",
+        ),
+        _buildInfoRow(
+          Icons.location_city,
+          "Cidade",
+          "${sale.client.address.city} - ${sale.client.address.zipCode}",
+        ),
+        if (sale.client.address.complement.isNotEmpty)
+          _buildInfoRow(
+            Icons.note,
+            "Complemento",
+            sale.client.address.complement,
+          ),
+        const SizedBox(height: 8),
+        _buildLocationSection(sale),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$label:",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection(SaleCollectorDTO sale) {
+    return Row(
+      children: [
+        const Icon(Icons.map, size: 16, color: Colors.grey),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            "Localização: ${sale.latitude != null && sale.longitude != null ? "Disponível" : "Não disponível"}",
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+        if (sale.latitude != null && sale.longitude != null)
+          ElevatedButton.icon(
+            icon: const Icon(Icons.directions, size: 16),
+            label: const Text("Mapa"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+            onPressed: () =>
+                _openMaps(sale.latitude!, sale.longitude!, context),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildInstallments(SaleCollectorDTO sale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Parcelas",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.blue,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...sale.installments.asMap().entries.map((entry) {
+          final index = entry.key;
+          final inst = entry.value; // ← Este é o objeto real da parcela
+          final canPay =
+              index == 0 ||
+              sale.installments.sublist(0, index).every((prev) => prev.paid);
+
+          return _buildInstallmentCard(inst, canPay, sale);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildInstallmentCard(
+    dynamic inst, // Mudei para dynamic ou use o tipo correto
+    bool canPay,
+    SaleCollectorDTO sale,
+  ) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: inst.paid ? Colors.green.shade50 : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              inst.paid ? Icons.check_circle : Icons.pending_actions,
+              color: inst.paid ? Colors.green : (Colors.blue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Vencimento: ${inst.dueDate.toLocal().toString().split(' ')[0]}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: inst.paid ? Colors.green : Colors.grey.shade800,
+                    ),
+                  ),
+                  Text(
+                    "Valor: R\$ ${inst.amount.toStringAsFixed(2)}",
+                    style: TextStyle(
+                      color: inst.paid ? Colors.green : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!inst.paid) _buildActionButtons(inst, canPay, sale),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(
+    dynamic inst, // Mudei para dynamic ou use o tipo correto
+    bool canPay,
+    SaleCollectorDTO sale,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Botão de tentativa
+        IconButton(
+          icon: const Icon(
+            Icons.report_problem,
+            color: Color.fromARGB(255, 248, 23, 23),
+          ),
+          tooltip: "Registrar tentativa",
+          onPressed: () => _showAttemptDialog(inst.id),
+        ),
+
+        // Botão de pagamento
+        IconButton(
+          icon: Icon(
+            Icons.attach_money,
+            color: canPay ? Colors.green : Colors.grey.shade400,
+          ),
+          tooltip: canPay
+              ? "Marcar como pago"
+              : "Pague as parcelas anteriores primeiro",
+          onPressed: canPay ? () => _markAsPaid(inst.id, inst.amount) : null,
+        ),
+      ],
+    );
+  }
+
+  void _showAttemptDialog(int installmentId) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade50, Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.report_problem, size: 48, color: Colors.orange),
+              const SizedBox(height: 16),
+              const Text(
+                "Registrar Tentativa",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildAttemptOption(
+                "CLIENTE AUSENTE",
+                "Cliente não estava em casa",
+              ),
+              _buildAttemptOption("RECUSOU PAGAMENTO", "Cliente recusou pagar"),
+              _buildAttemptOption("ENDEREÇO ERRADO", "Endereço incorreto"),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttemptOption(String value, String title) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: const Icon(Icons.warning, color: Colors.orange),
+        title: Text(title),
+        onTap: () {
+          Navigator.pop(context);
+          _registerAttempt(_collectorId!, value);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openMaps(double lat, double lng, BuildContext context) async {
+    try {
+      final String googleMapsUrl =
+          "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
+      final String googleMapsDirections =
+          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng";
+
+      if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+        await launchUrl(
+          Uri.parse(googleMapsUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } else if (await canLaunchUrl(Uri.parse("geo:$lat,$lng?q=$lat,$lng"))) {
+        await launchUrl(
+          Uri.parse("geo:$lat,$lng?q=$lat,$lng"),
+          mode: LaunchMode.externalApplication,
+        );
+      } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+        final String appleMapsUrl = "https://maps.apple.com/?ll=$lat,$lng";
+        if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+          await launchUrl(
+            Uri.parse(appleMapsUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          _showNoMapsAppDialog(context);
+        }
+      } else {
+        _showNoMapsAppDialog(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erro ao abrir Maps: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showNoMapsAppDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Apps de Mapas Não Encontrados"),
+        content: const Text(
+          "Nenhum app de mapas foi encontrado no seu dispositivo.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fetchCollectorSales() async {
@@ -39,9 +671,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
       setState(() {
         _collectorId = collector.idCollector;
         _salesByCity = salesByCity;
-        _sales = salesByCity.values
-            .expand((list) => list)
-            .toList(); // se ainda quiser a lista completa
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -333,499 +962,54 @@ class _CollectorScreenState extends State<CollectorScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    void _logout() {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
+  // Future<void> _logout() async {
+  //   final shouldLogout = await showDialog<bool>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (context) => AlertDialog(
+  //       backgroundColor: Colors.white,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  //       title: Row(
+  //         children: const [
+  //           Icon(Icons.logout_rounded, color: Colors.redAccent),
+  //           SizedBox(width: 8),
+  //           Text(
+  //             'Sair da conta',
+  //             style: TextStyle(
+  //               color: Colors.black87,
+  //               fontWeight: FontWeight.w600,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       content: const Text(
+  //         'Deseja realmente sair da conta?',
+  //         style: TextStyle(color: Colors.black54, fontSize: 15),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+  //         ),
+  //         ElevatedButton(
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.redAccent,
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.all(Radius.circular(10)),
+  //             ),
+  //           ),
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('Sair'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(
-          "Cobrador - ${widget.user.name}",
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.blue.shade700,
-        elevation: 4,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Atualizar',
-            onPressed: _fetchCollectorSales,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Sair',
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    "Carregando vendas...",
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                ],
-              ),
-            )
-          : _salesByCity.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Nenhuma venda encontrada",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchCollectorSales,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: _salesByCity.entries.map((entry) {
-                  final city = entry.key;
-                  final sales = entry.value;
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 3,
-                    child: ExpansionTile(
-                      title: Text(
-                        city,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      children: sales
-                          .map((sale) => _buildSaleCard(sale))
-                          .toList(),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-    );
-  }
-
-  Widget _buildSaleCard(SaleCollectorDTO sale) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue.shade50, Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: ExpansionTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.blue.shade100,
-            child: Text(
-              sale.client.name.substring(0, 1).toUpperCase(),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
-            ),
-          ),
-          title: Text(
-            sale.client.name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          subtitle: Text(
-            "Venda: ${sale.saleDate.toLocal().toString().split(' ')[0]}",
-            style: const TextStyle(color: Colors.grey),
-          ),
-          trailing: _buildStatusBadge(sale),
-          childrenPadding: const EdgeInsets.all(16),
-          children: [
-            _buildClientInfo(sale),
-            const SizedBox(height: 16),
-            _buildInstallments(sale),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(SaleCollectorDTO sale) {
-    final paidCount = sale.installments.where((inst) => inst.paid).length;
-    final totalCount = sale.installments.length;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: paidCount == totalCount
-            ? Colors.green.shade100
-            : Colors.orange.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: paidCount == totalCount ? Colors.green : Colors.orange,
-        ),
-      ),
-      child: Text(
-        "$paidCount/$totalCount",
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: paidCount == totalCount ? Colors.green : Colors.orange,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClientInfo(SaleCollectorDTO sale) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Informações do Cliente",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Colors.blue,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildInfoRow(Icons.person, "CPF", sale.client.cpf),
-        _buildInfoRow(Icons.phone, "Telefone", sale.client.phone),
-        _buildInfoRow(
-          Icons.location_on,
-          "Endereço",
-          "${sale.client.address.street}, nº ${sale.client.address.number}",
-        ),
-        _buildInfoRow(
-          Icons.location_city,
-          "Cidade",
-          "${sale.client.address.city} - ${sale.client.address.zipCode}",
-        ),
-        if (sale.client.address.complement.isNotEmpty)
-          _buildInfoRow(
-            Icons.note,
-            "Complemento",
-            sale.client.address.complement,
-          ),
-        const SizedBox(height: 8),
-        _buildLocationSection(sale),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "$label:",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationSection(SaleCollectorDTO sale) {
-    return Row(
-      children: [
-        const Icon(Icons.map, size: 16, color: Colors.grey),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            "Localização: ${sale.latitude != null && sale.longitude != null ? "Disponível" : "Não disponível"}",
-            style: const TextStyle(fontSize: 14),
-          ),
-        ),
-        if (sale.latitude != null && sale.longitude != null)
-          ElevatedButton.icon(
-            icon: const Icon(Icons.directions, size: 16),
-            label: const Text("Mapa"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
-            onPressed: () =>
-                _openMaps(sale.latitude!, sale.longitude!, context),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildInstallments(SaleCollectorDTO sale) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Parcelas",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Colors.blue,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...sale.installments.asMap().entries.map((entry) {
-          final index = entry.key;
-          final inst = entry.value; // ← Este é o objeto real da parcela
-          final canPay =
-              index == 0 ||
-              sale.installments.sublist(0, index).every((prev) => prev.paid);
-
-          return _buildInstallmentCard(inst, canPay, sale);
-        }),
-      ],
-    );
-  }
-
-  Widget _buildInstallmentCard(
-    dynamic inst, // Mudei para dynamic ou use o tipo correto
-    bool canPay,
-    SaleCollectorDTO sale,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: inst.paid ? Colors.green.shade50 : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(
-              inst.paid ? Icons.check_circle : Icons.pending_actions,
-              color: inst.paid ? Colors.green : Colors.orange,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Vencimento: ${inst.dueDate.toLocal().toString().split(' ')[0]}",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: inst.paid ? Colors.green : Colors.grey.shade800,
-                    ),
-                  ),
-                  Text(
-                    "Valor: R\$ ${inst.amount.toStringAsFixed(2)}",
-                    style: TextStyle(
-                      color: inst.paid ? Colors.green : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!inst.paid) _buildActionButtons(inst, canPay, sale),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(
-    dynamic inst, // Mudei para dynamic ou use o tipo correto
-    bool canPay,
-    SaleCollectorDTO sale,
-  ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Botão de tentativa
-        IconButton(
-          icon: const Icon(Icons.report_problem, color: Colors.orange),
-          tooltip: "Registrar tentativa",
-          onPressed: () => _showAttemptDialog(inst.id),
-        ),
-
-        // Botão de pagamento
-        Container(
-          decoration: BoxDecoration(
-            color: canPay ? Colors.green : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.attach_money,
-              color: canPay ? Colors.white : Colors.grey.shade500,
-            ),
-            tooltip: canPay
-                ? "Marcar como pago"
-                : "Pague as parcelas anteriores primeiro",
-            onPressed: canPay ? () => _markAsPaid(inst.id, inst.amount) : null,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showAttemptDialog(int installmentId) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.orange.shade50, Colors.white],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.report_problem, size: 48, color: Colors.orange),
-              const SizedBox(height: 16),
-              const Text(
-                "Registrar Tentativa",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildAttemptOption(
-                "CLIENTE AUSENTE",
-                "Cliente não estava em casa",
-              ),
-              _buildAttemptOption("RECUSOU PAGAMENTO", "Cliente recusou pagar"),
-              _buildAttemptOption("ENDEREÇO ERRADO", "Endereço incorreto"),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAttemptOption(String value, String title) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const Icon(Icons.warning, color: Colors.orange),
-        title: Text(title),
-        onTap: () {
-          Navigator.pop(context);
-          _registerAttempt(_collectorId!, value);
-        },
-      ),
-    );
-  }
-
-  Future<void> _openMaps(double lat, double lng, BuildContext context) async {
-    try {
-      final String googleMapsUrl =
-          "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
-      final String googleMapsDirections =
-          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng";
-
-      if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-        await launchUrl(
-          Uri.parse(googleMapsUrl),
-          mode: LaunchMode.externalApplication,
-        );
-      } else if (await canLaunchUrl(Uri.parse("geo:$lat,$lng?q=$lat,$lng"))) {
-        await launchUrl(
-          Uri.parse("geo:$lat,$lng?q=$lat,$lng"),
-          mode: LaunchMode.externalApplication,
-        );
-      } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-        final String appleMapsUrl = "https://maps.apple.com/?ll=$lat,$lng";
-        if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
-          await launchUrl(
-            Uri.parse(appleMapsUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          _showNoMapsAppDialog(context);
-        }
-      } else {
-        _showNoMapsAppDialog(context);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Erro ao abrir Maps: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _showNoMapsAppDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Apps de Mapas Não Encontrados"),
-        content: const Text(
-          "Nenhum app de mapas foi encontrado no seu dispositivo.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
+  //   if (shouldLogout == true && mounted) {
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
+  //     );
+  //   }
+  // }
 }
