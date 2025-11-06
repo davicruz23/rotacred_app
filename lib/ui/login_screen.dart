@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rotacred_app/model/user.dart';
 import 'package:rotacred_app/ui/home_screen.dart';
 import '../services/auth_service.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,13 +37,17 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Logo
                 Image.asset(
                   'assets/logo.png',
                   height: 300,
                   width: 300,
                   fit: BoxFit.contain,
                 ),
+
                 const SizedBox(height: 0),
+
+                // Card de login
                 Card(
                   elevation: 6,
                   shape: RoundedRectangleBorder(
@@ -97,11 +102,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 16),
                           Text(
                             _error!,
-                            textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 14,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -125,27 +128,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final result = await _authService.login(
-        _cpfController.text.trim(),
-        _passwordController.text.trim(),
+        _cpfController.text,
+        _passwordController.text,
       );
 
+      final token = result['token'];
+      Map<String, dynamic> payload = Jwt.parseJwt(token);
+
       final user = User(
-        id: result['id'],
-        name: result['name'],
-        cpf: result['cpf'],
-        position: result['position'],
+        id: payload['id'],
+        name: payload['name'],
+        cpf: payload['sub'],
+        position: payload['position'],
       );
 
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
       );
     } catch (e) {
       setState(() {
-        // remove o "Exception:" e mostra só a mensagem
-        _error = e.toString().replaceFirst('Exception: ', '').trim();
+        _error = e.toString();
       });
     } finally {
       setState(() {

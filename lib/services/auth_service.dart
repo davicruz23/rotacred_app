@@ -16,37 +16,23 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      // Salva o token ou user
+      // Salvar token no dispositivo
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user', jsonEncode(data));
+      await prefs.setString('token', data['token']);
 
       return data;
     } else {
-      // Tenta extrair o campo "message" do JSON retornado
-      try {
-        final errorData = jsonDecode(response.body);
-        if (errorData is Map && errorData.containsKey('message')) {
-          throw Exception(errorData['message']);
-        } else {
-          throw Exception('Erro no login.');
-        }
-      } catch (_) {
-        throw Exception('Erro no login.');
-      }
+      throw Exception('Erro no login: ${response.body}');
     }
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('user');
+    await prefs.remove('token');
   }
 
-  Future<Map<String, dynamic>?> getUser() async {
+  Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final userString = prefs.getString('user');
-    if (userString != null) {
-      return jsonDecode(userString);
-    }
-    return null;
+    return prefs.getString('token');
   }
 }

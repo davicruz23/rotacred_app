@@ -12,8 +12,8 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     switch (user.position) {
-      // case 'FUNCIONARIO':
-      //   return FuncionarioScreen(user: user);
+      case 'FUNCIONARIO':
+        return FuncionarioScreen(user: user);
       case 'VENDEDOR':
         return SellerScreen(user: user);
       case 'FISCAL':
