@@ -127,19 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final result = await _authService.login(
+      final user = await _authService.login(
         _cpfController.text,
         _passwordController.text,
-      );
-
-      final token = result['token'];
-      Map<String, dynamic> payload = Jwt.parseJwt(token);
-
-      final user = User(
-        id: payload['id'],
-        name: payload['name'],
-        cpf: payload['sub'],
-        position: payload['position'],
       );
 
       if (!mounted) return;

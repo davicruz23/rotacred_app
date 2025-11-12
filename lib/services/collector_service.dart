@@ -4,18 +4,28 @@ import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/dto/collector_dto.dart';
 import '../model/dto/sale_collector_dto.dart';
 import 'dart:typed_data';
+import 'auth_service.dart'; // importa AuthService para pegar o token
 
 class CollectorService {
   final String baseUrl = Environment.apiBaseUrl;
+  final AuthService _authService = AuthService();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _authService.getToken();
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    };
+  }
 
   Future<Map<String, List<SaleCollectorDTO>>> getSalesForCollector(
     int collectorId,
   ) async {
+    final headers = await _getHeaders();
     final url = Uri.parse('$baseUrl/collector/$collectorId/sales');
-    final response = await http.get(url);
+    final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
-      print('cobranças: ${response.body}');
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       return data.map((city, salesJson) {
@@ -32,41 +42,31 @@ class CollectorService {
   }
 
   Future<CollectorDto> getCollectorByUserId(int userId) async {
+    final headers = await _getHeaders();
     final response = await http.get(
       Uri.parse('$baseUrl/collector/by-user/$userId'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonData = json.decode(response.body);
       return CollectorDto.fromJson(jsonData);
     } else {
-      throw Exception('Erro ao buscar Inspector pelo usuário');
+      throw Exception('Erro ao buscar Collector pelo usuário');
     }
   }
 
   Future<void> paySale(int installmentId) async {
+    final headers = await _getHeaders();
     final url = Uri.parse('$baseUrl/collector/$installmentId/pay');
-    final response = await http.put(url);
+    final response = await http.put(url, headers: headers);
+
     if (response.statusCode != 200) {
       throw Exception(
         'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
       );
     }
   }
-
-  /*Future<void> payInstallment(CollectionAttemptDTO attempt) async {
-    final url = Uri.parse('$baseUrl/collector/attempt');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(attempt.toJson()),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-          'Erro ao registrar pagamento: ${response.statusCode} - ${response.body}');
-    }
-  }*/
 
   Future<void> collectInstallment({
     required int collectorId,
@@ -78,6 +78,7 @@ class CollectorService {
     String? note,
     DateTime? newDueDate,
   }) async {
+    final headers = await _getHeaders();
     final url = Uri.parse(
       '$baseUrl/collector/$collectorId/installment/$installmentId/collect',
     );
@@ -93,7 +94,7 @@ class CollectorService {
 
     final response = await http.put(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(payload),
     );
 
@@ -105,8 +106,10 @@ class CollectorService {
   }
 
   Future<Uint8List> getPixQrCode(int installmentId) async {
+    final headers = await _getHeaders();
     final url = Uri.parse('$baseUrl/collector/installment/$installmentId/pix');
-    final response = await http.get(url);
+    final response = await http.get(url, headers: headers);
+
     if (response.statusCode == 200) {
       return response.bodyBytes; // retorna a imagem PNG
     } else {
