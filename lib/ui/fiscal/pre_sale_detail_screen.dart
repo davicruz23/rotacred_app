@@ -102,10 +102,12 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
           children: [
             // Informações básicas
             _highlightInfoCard(
-              "Data:",
-              "${widget.preSale.preSaleDate}",
               "Vendedor:",
               widget.preSale.seller.nomeSeller,
+              "Data:",
+              "${widget.preSale.preSaleDate.day.toString().padLeft(2, '0')}/"
+                  "${widget.preSale.preSaleDate.month.toString().padLeft(2, '0')}/"
+                  "${widget.preSale.preSaleDate.year}",
             ),
 
             const SizedBox(height: 20),
