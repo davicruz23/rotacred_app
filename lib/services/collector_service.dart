@@ -56,15 +56,32 @@ class CollectorService {
     }
   }
 
-  Future<void> paySale(int installmentId) async {
+  // Future<void> paySale(int installmentId) async {
+  //   final headers = await _getHeaders();
+  //   final url = Uri.parse('$baseUrl/collector/$installmentId/pay');
+  //   final response = await http.put(url, headers: headers);
+
+  //   if (response.statusCode != 200) {
+  //     throw Exception(
+  //       'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
+  //     );
+  //   }
+  // }
+
+  Future<void> paySale({
+    required int installmentId,
+    required double amount,
+  }) async {
     final headers = await _getHeaders();
-    final url = Uri.parse('$baseUrl/collector/$installmentId/pay');
+
+    final url = Uri.parse(
+      '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
+    );
+
     final response = await http.put(url, headers: headers);
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
-      );
+      throw Exception('Erro ao pagar parcela');
     }
   }
 
