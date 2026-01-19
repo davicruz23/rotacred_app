@@ -28,6 +28,8 @@ class CollectorService {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
+      print("quero ver oque veio aqui pohha: ${response.body}");
+
       return data.map((city, salesJson) {
         final salesList = (salesJson as List)
             .map((json) => SaleCollectorDTO.fromJson(json))
@@ -56,18 +58,6 @@ class CollectorService {
     }
   }
 
-  // Future<void> paySale(int installmentId) async {
-  //   final headers = await _getHeaders();
-  //   final url = Uri.parse('$baseUrl/collector/$installmentId/pay');
-  //   final response = await http.put(url, headers: headers);
-
-  //   if (response.statusCode != 200) {
-  //     throw Exception(
-  //       'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
-  //     );
-  //   }
-  // }
-
   Future<void> paySale({
     required int installmentId,
     required double amount,
@@ -78,10 +68,14 @@ class CollectorService {
       '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
     );
 
+    print('PAY INSTALLMENT URL: $url');
+
     final response = await http.put(url, headers: headers);
 
     if (response.statusCode != 200) {
-      throw Exception('Erro ao pagar parcela');
+      throw Exception(
+        'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
+      );
     }
   }
 

@@ -5,6 +5,7 @@ import '../../services/collector_service.dart';
 import '../../model/user.dart';
 import '../login_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 class CollectorScreen extends StatefulWidget {
   final User user;
@@ -286,7 +287,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
               ),
               const SizedBox(width: 4),
               Text(
-                "Venda: ${sale.saleDate.toLocal().toString().split(' ')[0]}",
+                "Data da Venda: ${DateFormat('dd/MM/yyyy').format(sale.saleDate.toLocal())}",
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ],
@@ -355,21 +356,17 @@ class _CollectorScreenState extends State<CollectorScreen> {
         ),
         const SizedBox(height: 12),
         _buildInfoRow(Icons.person, "CPF", sale.client.cpf),
-        _buildInfoRow(Icons.phone, "Telefone", sale.client.phone),
+        _buildInfoRow(Icons.phone, "TELEFONE", sale.client.phone),
         _buildInfoRow(
           Icons.location_on,
-          "Endereço",
-          "${sale.client.address.street}, nº ${sale.client.address.number}",
+          "ENDEREÇO:",
+          "${sale.client.address.street}, Nº: ${sale.client.address.number}, CEP: ${sale.client.address.zipCode}",
         ),
-        _buildInfoRow(
-          Icons.location_city,
-          "Cidade",
-          "${sale.client.address.city} - ${sale.client.address.zipCode}",
-        ),
+        _buildInfoRow(Icons.location_city, "CIDADE", sale.client.address.city),
         if (sale.client.address.complement.isNotEmpty)
           _buildInfoRow(
             Icons.note,
-            "Complemento",
+            "COMPLEMENTO",
             sale.client.address.complement,
           ),
         const SizedBox(height: 8),
@@ -488,14 +485,14 @@ class _CollectorScreenState extends State<CollectorScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Vencimento: ${inst.dueDate.toLocal().toString().split(' ')[0]}",
+                    "Vencimento: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(inst.dueDate.toLocal())}",
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: inst.paid ? Colors.green : Colors.grey.shade800,
                     ),
                   ),
                   Text(
-                    "Valor: R\$ ${inst.amount.toStringAsFixed(2)}",
+                    "Valor Recebido: R\$ ${inst.amount.toStringAsFixed(2)}",
                     style: TextStyle(
                       color: inst.paid ? Colors.green : Colors.grey.shade600,
                     ),
@@ -771,9 +768,126 @@ class _CollectorScreenState extends State<CollectorScreen> {
 
       if (paymentMethod == null) return;
 
-      if (paymentMethod == "CASH") {
-        final cashAmount = await _showCashAmountDialog(amount);
+      if (paymentMethod == "PIX") {
+        final qrImage = await CollectorService().getPixQrCode(installmentId);
+
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade50, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.qr_code_scanner,
+                    size: 48,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Pagamento via PIX",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.green.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Image.memory(qrImage, width: 200, height: 200),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Escaneie o QR Code para pagar\nApós confirmação, toque em 'Confirmar'",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade400),
+                          ),
+                          child: const Text("Cancelar"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text("Confirmar"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () => Navigator.pop(context, true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        await CollectorService().collectInstallment(
+          collectorId: _collectorId!,
+          installmentId: installmentId,
+          note: "Pago via PIX",
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        );
+
+        if (confirmed == true) {
+          await CollectorService().collectInstallment(
+            collectorId: _collectorId!,
+            installmentId: installmentId,
+            amount: amount,
+            paymentMethod: paymentMethod,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            note: "PIX confirmado manualmente",
+          );
+        }
+      } else if (paymentMethod == "CASH") {
+        final cashAmount = await _askCashAmount();
         if (cashAmount == null) return;
+
+        // 🔍 debug
+        print("Pagamento em dinheiro: $cashAmount");
+
+        await CollectorService().paySale(
+          installmentId: installmentId,
+          amount: cashAmount,
+        );
 
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
@@ -782,143 +896,32 @@ class _CollectorScreenState extends State<CollectorScreen> {
           paymentMethod: paymentMethod,
           latitude: pos.latitude,
           longitude: pos.longitude,
-          note: "Pagamento em dinheiro",
+          note: "Pago em dinheiro",
         );
-      } else if (paymentMethod == "PIX") {
-        if (paymentMethod == "PIX") {
-          final qrImage = await CollectorService().getPixQrCode(installmentId);
-
-          final confirmed = await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade50, Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.qr_code_scanner,
-                      size: 48,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Pagamento via PIX",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.green.shade300),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Image.memory(qrImage, width: 200, height: 200),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "Escaneie o QR Code para pagar\nApós confirmação, toque em 'Confirmar'",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              side: BorderSide(color: Colors.grey.shade400),
-                            ),
-                            child: const Text("Cancelar"),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.check_circle),
-                            label: const Text("Confirmar"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onPressed: () => Navigator.pop(context, true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-
-          await CollectorService().collectInstallment(
-            collectorId: _collectorId!,
-            installmentId: installmentId,
-            note: "Pago via PIX",
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-          );
-
-          if (confirmed == true) {
-            await CollectorService().collectInstallment(
-              collectorId: _collectorId!,
-              installmentId: installmentId,
-              amount: amount,
-              paymentMethod: paymentMethod,
-              latitude: pos.latitude,
-              longitude: pos.longitude,
-              note: "PIX confirmado manualmente",
-            );
-          }
-        } else {
-          await CollectorService().collectInstallment(
-            collectorId: _collectorId!,
-            installmentId: installmentId,
-            amount: amount,
-            paymentMethod: paymentMethod,
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            note: "Pagamento realizado com sucesso",
-          );
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Pagamento registrado com sucesso! ✅"),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+      } else {
+        await CollectorService().collectInstallment(
+          collectorId: _collectorId!,
+          installmentId: installmentId,
+          amount: amount,
+          paymentMethod: paymentMethod,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          note: "Pagamento realizado com sucesso",
         );
-
-        await _fetchCollectorSales();
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Pagamento registrado com sucesso! ✅"),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+
+      await _fetchCollectorSales();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -929,19 +932,20 @@ class _CollectorScreenState extends State<CollectorScreen> {
     }
   }
 
-  Future<double?> _showCashAmountDialog(double maxAmount) async {
-    final controller = TextEditingController();
+  Future<double?> _askCashAmount() async {
+    final TextEditingController controller = TextEditingController();
 
-    return showDialog<double>(
+    return await showDialog<double>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Pagamento em dinheiro"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Valor recebido"),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: "Valor recebido",
-            hintText: "Máx: ${maxAmount.toStringAsFixed(2)}",
+          decoration: const InputDecoration(
+            prefixText: "R\$ ",
+            hintText: "Ex: 50.00",
           ),
         ),
         actions: [
@@ -950,24 +954,19 @@ class _CollectorScreenState extends State<CollectorScreen> {
             child: const Text("Cancelar"),
           ),
           ElevatedButton(
-            child: const Text("Confirmar"),
             onPressed: () {
-              final value = double.tryParse(
+              final double? value = double.tryParse(
                 controller.text.replaceAll(',', '.'),
               );
 
-              if (value == null || value <= 0 || value > maxAmount) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Informe um valor válido"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+              if (value == null || value <= 0) {
+                // Se quiser, dá pra mostrar um erro aqui
                 return;
               }
 
               Navigator.pop(context, value);
             },
+            child: const Text("Confirmar"),
           ),
         ],
       ),
@@ -1021,4 +1020,55 @@ class _CollectorScreenState extends State<CollectorScreen> {
       );
     }
   }
+
+  // Future<void> _logout() async {
+  //   final shouldLogout = await showDialog<bool>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (context) => AlertDialog(
+  //       backgroundColor: Colors.white,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  //       title: Row(
+  //         children: const [
+  //           Icon(Icons.logout_rounded, color: Colors.redAccent),
+  //           SizedBox(width: 8),
+  //           Text(
+  //             'Sair da conta',
+  //             style: TextStyle(
+  //               color: Colors.black87,
+  //               fontWeight: FontWeight.w600,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       content: const Text(
+  //         'Deseja realmente sair da conta?',
+  //         style: TextStyle(color: Colors.black54, fontSize: 15),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+  //         ),
+  //         ElevatedButton(
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.redAccent,
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.all(Radius.circular(10)),
+  //             ),
+  //           ),
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('Sair'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   if (shouldLogout == true && mounted) {
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
+  //     );
+  //   }
+  // }
 }

@@ -6,6 +6,7 @@ class SaleCollectorDTO {
   final ClientDTO client;
   final List<ProductSaleDTO> products;
   final List<InstallmentDTO> installments;
+  final double? paidAmount;
   final double? latitude;
   final double? longitude;
 
@@ -15,6 +16,7 @@ class SaleCollectorDTO {
     required this.client,
     required this.products,
     required this.installments,
+    required this.paidAmount,
     this.latitude,
     this.longitude,
   });
@@ -38,6 +40,7 @@ class SaleCollectorDTO {
       installments: (json['installments'] as List)
           .map((e) => InstallmentDTO.fromJson(e))
           .toList(),
+      paidAmount: json[''],
       latitude: json['latitude'],
       longitude: json['longitude'],
     );
