@@ -75,7 +75,7 @@ class _SelectChargingTabState extends State<SelectChargingTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              charging.description ?? 'Sem descrição',
+                              charging.description,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,

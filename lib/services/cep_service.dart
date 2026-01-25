@@ -17,19 +17,18 @@ class CepService {
 
   Future<Map<String, dynamic>> buscarPorCep(String cep) async {
     final headers = await _getHeaders();
-
     final response = await http.get(
-      Uri.parse('$baseUrl/api/cep/$cep'),
-      headers: headers,
+      Uri.parse('$baseUrl/cep/$cep'),
+      headers: headers
     );
 
+    print('STATUS: ${response.statusCode}');
+    print('BODY: ${response.body}');
+
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data as Map<String, dynamic>;
+      return json.decode(response.body) as Map<String, dynamic>;
     } else {
-      throw Exception(
-        'Erro ao buscar CEP ($cep): ${response.statusCode}',
-      );
+      throw Exception('Erro ao buscar CEP');
     }
   }
 }

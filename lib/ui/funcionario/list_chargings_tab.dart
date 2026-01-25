@@ -125,7 +125,7 @@ class _ListChargingsTabState extends State<ListChargingsTab> {
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.15),
+                        color: Colors.grey.withValues(),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -135,14 +135,14 @@ class _ListChargingsTabState extends State<ListChargingsTab> {
                     iconColor: Colors.blueAccent,
                     collapsedIconColor: Colors.blueAccent,
                     leading: CircleAvatar(
-                      backgroundColor: Colors.blueAccent.withOpacity(0.1),
+                      backgroundColor: Colors.blueAccent.withValues(),
                       child: const Icon(
                         Icons.local_shipping,
                         color: Colors.blueAccent,
                       ),
                     ),
                     title: Text(
-                      charging.description ?? 'Sem descrição',
+                      charging.description,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,

@@ -601,8 +601,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
     try {
       final String googleMapsUrl =
           "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
-      final String googleMapsDirections =
-          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng";
 
       if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
         await launchUrl(

@@ -182,7 +182,7 @@ class _InspectorScreenState extends State<InspectorScreen> {
                     const Icon(Icons.person_outline, color: Colors.white70),
                     const SizedBox(width: 8),
                     Text(
-                      widget.user.name ?? 'Usuário',
+                      widget.user.name,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 15,

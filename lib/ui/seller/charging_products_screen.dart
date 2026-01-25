@@ -4,7 +4,6 @@ import '../../model/charging.dart';
 import '../../model/pre_sale_item.dart';
 import '../seller/create_pre_sale_screen.dart';
 import '../../services/charging_service.dart';
-import 'package:intl/intl.dart';
 
 
 class ChargingProductsScreen extends StatefulWidget {
@@ -70,7 +69,7 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
 
   Future<void> _reloadCharging() async {
     final updated = await ChargingService().getChargingById(
-      widget.charging.id!,
+      widget.charging.id,
     );
     setState(() => _charging = updated);
   }

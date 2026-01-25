@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:rotacred_app/model/user.dart';
 import 'package:rotacred_app/ui/home_screen.dart';
 import '../services/auth_service.dart';
-import 'package:jwt_decode/jwt_decode.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

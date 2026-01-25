@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:rotacred_app/services/cep_service.dart';
 import '../../model/user.dart';
 import '../../model/pre_sale_item.dart';
 import '../../model/pre_sale.dart';
@@ -8,6 +9,7 @@ import '../../model/address.dart';
 import '../../model/charging.dart';
 import '../../services/pre_sale_service.dart';
 import '../../services/seller_service.dart';
+import '../../services/cpf_validator_service.dart';
 
 class CreatePreSaleScreen extends StatefulWidget {
   final User user;
@@ -28,10 +30,14 @@ class CreatePreSaleScreen extends StatefulWidget {
 class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
   final _formKey = GlobalKey<FormState>();
   final PreSaleService _preSaleService = PreSaleService();
+  final CepService _cepService = CepService();
   final SellerService _sellerService = SellerService();
+  final CpfValidatorService _cpfValidatorService = CpfValidatorService();
 
   bool _isLoading = false;
   String _selectedState = 'PB';
+  String? _cpfErro;
+  bool _validandoCpf = false;
 
   final _nameCtrl = TextEditingController();
   final _cpfCtrl = TextEditingController();
@@ -249,11 +255,26 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                     controller: _cpfCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: _inputDecoration("CPF *", Icons.badge),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Informe o CPF';
-                      if (v.length != 11) return 'CPF inválido (11 dígitos)';
-                      return null;
+                    decoration: _inputDecoration(
+                      "CPF *",
+                      Icons.badge,
+                    ).copyWith(errorText: _cpfErro),
+                    onChanged: (v) async {
+                      if (v.length < 11) {
+                        setState(() => _cpfErro = null);
+                        return;
+                      }
+                      if (v.length == 11 && !_validandoCpf) {
+                        _validandoCpf = true;
+
+                        final valido = await _cpfValidatorService.validarCpf(v);
+
+                        setState(() {
+                          _cpfErro = valido ? null : 'CPF inválido';
+                        });
+
+                        _validandoCpf = false;
+                      }
                     },
                   ),
                 ),
@@ -286,6 +307,12 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                       if (v == null || v.isEmpty) return 'Informe o CEP';
                       if (v.length != 8) return 'CEP inválido';
                       return null;
+                    },
+                    onChanged: (value) {
+                      if (value.length == 8) {
+                        _buscarCepEPreencher(value);
+                        FocusScope.of(context).unfocus();
+                      }
                     },
                   ),
                 ),
@@ -476,7 +503,7 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
         seller: seller,
         client: client,
         items: widget.selectedItems,
-        chargingId: widget.charging.id!,
+        chargingId: widget.charging.id,
       );
 
       await _preSaleService.createPreSale(preSale);
@@ -492,6 +519,46 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
       ).showSnackBar(SnackBar(content: Text("❌ Erro ao criar pré-venda: $e")));
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _buscarCepEPreencher(String cep) async {
+    try {
+      final data = await _cepService.buscarPorCep(cep);
+
+      debugPrint('CEP retornou: $data');
+
+      // Atualiza os controladores
+      setState(() {
+        _streetCtrl.text = data['street'] ?? data['logradouro'] ?? '';
+        _cityCtrl.text = data['city'] ?? data['localidade'] ?? '';
+
+        final estadoRetornado = data['state'] ?? data['uf'] ?? '';
+        if (estadoRetornado.isNotEmpty) {
+          _selectedState = estadoRetornado.toUpperCase();
+          _stateCtrl.text = _selectedState;
+        }
+
+        FocusScope.of(context).requestFocus(FocusNode());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_numberCtrl.text.isEmpty) {
+            FocusScope.of(context).requestFocus(FocusNode());
+            Future.delayed(Duration(milliseconds: 100), () {
+              FocusScope.of(context).requestFocus(FocusNode());
+            });
+          }
+        });
+      });
+    } catch (e, stack) {
+      debugPrint('❌ Erro ao buscar CEP: $e');
+      debugPrint(stack.toString());
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ CEP não encontrado ou erro na consulta"),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 }
