@@ -22,9 +22,6 @@ class CepService {
       headers: headers
     );
 
-    print('STATUS: ${response.statusCode}');
-    print('BODY: ${response.body}');
-
     if (response.statusCode == 200) {
       return json.decode(response.body) as Map<String, dynamic>;
     } else {

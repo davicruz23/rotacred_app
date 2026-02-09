@@ -12,7 +12,6 @@ class InspectorService {
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getToken();
-    print('🔑 Token sendo usado: $token');
     return {
       "Content-Type": "application/json",
       "Authorization": "Bearer $token",
@@ -20,15 +19,11 @@ class InspectorService {
   }
 
   Future<List<PreSale>> getPendingPreSales(int inspectorId) async {
-    print('📥 Chamando getPendingPreSales para inspectorId: $inspectorId');
     final headers = await _getHeaders();
     final response = await http.get(
       Uri.parse('$baseUrl/inspector/$inspectorId/pre-sales/pending'),
       headers: headers,
     );
-
-    print('📦 Status code: ${response.statusCode}');
-    print('📦 Retorno da API: ${response.body}');
 
     if (response.statusCode == 200) {
       final List<dynamic> body = json.decode(response.body);
@@ -49,7 +44,6 @@ class InspectorService {
     double? latitude,
     double? longitude,
   }) async {
-    print('✅ Chamando approvePreSale para preSaleId: $preSaleId');
     final headers = await _getHeaders();
     final response = await http.post(
       Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/approve"),
@@ -64,24 +58,17 @@ class InspectorService {
       }),
     );
 
-    print('📦 Status code approve: ${response.statusCode}');
-    print('📦 Retorno approve: ${response.body}');
-
     if (response.statusCode != 200) {
       throw Exception("Erro ao aprovar pré-venda (${response.statusCode})");
     }
   }
 
   Future<void> rejectPreSale(int preSaleId) async {
-    print('❌ Chamando rejectPreSale para preSaleId: $preSaleId');
     final headers = await _getHeaders();
     final response = await http.post(
       Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/reject"),
       headers: headers,
     );
-
-    print('📦 Status code reject: ${response.statusCode}');
-    print('📦 Retorno reject: ${response.body}');
 
     if (response.statusCode != 200) {
       throw Exception("Erro ao recusar pré-venda (${response.statusCode})");
@@ -89,15 +76,11 @@ class InspectorService {
   }
 
   Future<InspectorDTO> getInspectorByUserId(int userId) async {
-    print('🔍 Chamando getInspectorByUserId para userId: $userId');
     final headers = await _getHeaders();
     final response = await http.get(
       Uri.parse('$baseUrl/inspector/by-user/$userId'),
       headers: headers,
     );
-
-    print('📦 Status code inspector: ${response.statusCode}');
-    print('📦 Retorno inspector: ${response.body}');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonData = json.decode(response.body);
@@ -112,13 +95,9 @@ class InspectorService {
   Future<List<InspectorHistoryPreSaleDto>> getHistoryByInspectorId(
     int inspectorId,
   ) async {
-    print('📜 Chamando getHistoryByInspectorId para inspectorId: $inspectorId');
     final headers = await _getHeaders();
     final url = Uri.parse('$baseUrl/inspector/$inspectorId/pre-sales-history');
     final response = await http.get(url, headers: headers);
-
-    print('📦 Status code history: ${response.statusCode}');
-    print('📦 Retorno history: ${response.body}');
 
     if (response.statusCode == 200) {
       final List jsonList = json.decode(response.body);

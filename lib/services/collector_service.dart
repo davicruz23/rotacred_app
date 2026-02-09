@@ -28,8 +28,6 @@ class CollectorService {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
-      print("quero ver oque veio aqui pohha: ${response.body}");
-
       return data.map((city, salesJson) {
         final salesList = (salesJson as List)
             .map((json) => SaleCollectorDTO.fromJson(json))
@@ -67,8 +65,6 @@ class CollectorService {
     final url = Uri.parse(
       '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
     );
-
-    print('PAY INSTALLMENT URL: $url');
 
     final response = await http.put(url, headers: headers);
 

@@ -879,9 +879,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
         final cashAmount = await _askCashAmount();
         if (cashAmount == null) return;
 
-        // 🔍 debug
-        print("Pagamento em dinheiro: $cashAmount");
-
         await CollectorService().paySale(
           installmentId: installmentId,
           amount: cashAmount,

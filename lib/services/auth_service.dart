@@ -9,15 +9,13 @@ class LoginException implements Exception {
   LoginException(this.message);
 
   @override
-  String toString() => message; // retorna apenas a mensagem limpa
+  String toString() => message;
 }
 
 class AuthService {
   final String baseUrl = Environment.apiBaseUrl;
 
   Future<User> login(String cpf, String password) async {
-    print("🔐 chamando login...");
-
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -28,26 +26,27 @@ class AuthService {
       final data = jsonDecode(response.body);
       final token = data['token'];
 
-      print("✅ Login OK: $data");
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-
-      // 🎯 Decodificando payload
       final payloadBase64 = token.split('.')[1];
       final normalized = base64.normalize(payloadBase64);
       final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)));
 
-      print("➡️ Payload token: $payload");
+      final role = payload['role'];
+
+      const allowedRoles = {'ROLE_VENDEDOR', 'ROLE_FISCAL', 'ROLE_COBRADOR'};
+
+      if (!allowedRoles.contains(role)) {
+        throw LoginException("Usuário não tem permissão para acessar!");
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
 
       final user = User(
         id: payload['id'],
         cpf: payload['sub'],
         name: payload['nome'],
-        position: payload['role'], // ⚡ manter ROLE_ para evitar 403
+        position: role,
       );
-
-      print('usuario: ${user.position}');
 
       return user;
     } else {

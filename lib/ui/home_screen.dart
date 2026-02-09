@@ -3,7 +3,6 @@ import 'package:rotacred_app/ui/collector/collector_screen.dart';
 import 'package:rotacred_app/ui/fiscal/inspector_screen.dart';
 import 'package:rotacred_app/ui/seller/seller_screen.dart';
 import '../model/user.dart';
-import 'funcionario/funcionario_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final User user;
@@ -12,8 +11,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     switch (user.position) {
-      case 'ROLE_FUNCIONARIO':
-        return FuncionarioScreen(user: user);
       case 'ROLE_VENDEDOR':
         return SellerScreen(user: user);
       case 'ROLE_FISCAL':
