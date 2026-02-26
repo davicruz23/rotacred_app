@@ -63,11 +63,11 @@ Antes de tudo, instale:
 
 ```bash
 git clone https://github.com/davicruz23/rotacred_app.git
-
+````
 2) Entrar na pasta do projeto:
 cd rotacred_app
 
-3)Instale as dependências
+3) Instale as dependências
 flutter pub get
 
 4) Configurar Enviroments
