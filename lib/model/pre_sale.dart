@@ -13,6 +13,8 @@ class PreSale {
   final String? status;
   final int? chargingId;
   final double? totalPreSale;
+  final String uuidPreSale;
+  
 
   PreSale({
     this.id,
@@ -24,6 +26,7 @@ class PreSale {
     this.status,
     this.chargingId,
     this.totalPreSale,
+    required this.uuidPreSale,
   });
 
   factory PreSale.fromJson(Map<String, dynamic> json) {
@@ -47,6 +50,7 @@ class PreSale {
       status: json['status'],
       chargingId: json['chargingId'],
       totalPreSale: json['totalPreSale'],
+      uuidPreSale: json['uuidPreSale'] ?? ''
     );
   }
 
@@ -60,6 +64,7 @@ class PreSale {
       'products': items
           .map((i) => {'productId': i.productId, 'quantity': i.quantity})
           .toList(),
+      'uuidPreSale': uuidPreSale,
     };
   }
 }

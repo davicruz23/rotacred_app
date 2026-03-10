@@ -1,45 +1,53 @@
+import 'package:isar/isar.dart';
 import 'charging_item.dart';
 
-class Charging {
-  final int id;
-  final String chargingDate;
-  final String userName;
-  final String description;
-  final String data;
-  final List<ChargingItem> chargingItems;
+part 'charging.g.dart';
 
-  Charging({
-    required this.id,
-    required this.chargingDate,
-    required this.userName,
-    required this.description,
-    required this.data,
-    required this.chargingItems,
-  });
+@collection
+class Charging {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true) // 👈 importante
+  late int serverId;
+
+  late String chargingDate;
+  late String userName;
+  late String description;
+  late String data;
+
+  @ignore
+  List<ChargingItem> chargingItems = [];
+
+  Charging();
 
   factory Charging.fromJson(Map<String, dynamic> json) {
-    return Charging(
-      id: json['id'] ?? 0,
-      chargingDate: json['chargingDate'] ?? '',
-      userName: json['userName'] ?? '',
-      description: json['description'] ?? '',
-      data: json['data'] ?? '',
-      chargingItems: (json['chargingItems'] as List<dynamic>?)
-              ?.map((e) => ChargingItem.fromJson(e))
-              .toList() ??
-          [],
-    );
+    final charging = Charging();
+
+    charging.serverId = json['id'] ?? 0;
+    charging.chargingDate = json['chargingDate'] ?? '';
+    charging.userName = json['userName'] ?? '';
+    charging.description = json['description'] ?? '';
+    charging.data = json['data'] ?? '';
+
+    charging.chargingItems =
+        (json['chargingItems'] as List<dynamic>?)
+            ?.map((e) => ChargingItem.fromJson(e))
+            .toList() ??
+        [];
+
+    return charging;
   }
 
   factory Charging.empty() {
-    return Charging(
-      id: 0,
-      chargingDate: '',
-      userName: '',
-      description: '',
-      data: '',
-      chargingItems: [],
-    );
+    final charging = Charging();
+
+    charging.serverId = 0;
+    charging.chargingDate = '';
+    charging.userName = '';
+    charging.description = '';
+    charging.data = '';
+    charging.chargingItems = [];
+
+    return charging;
   }
 }
-

@@ -1,28 +1,32 @@
-class User {
-  final   int id;
-  final String name;
-  final String cpf;
-  final String position;
+import 'package:isar/isar.dart';
 
-  User({
-    required this.id,
-    required this.name,
-    required this.cpf,
-    required this.position,
-  });
+part 'user.g.dart';
+
+@collection
+class User {
+
+  Id id = Isar.autoIncrement;
+
+  late int serverId;
+  late String name;
+  late String cpf;
+  late String position;
+  late String passwordHash;
+
+  User();
 
   factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      name: json['name'],
-      cpf: json['cpf'],
-      position: json['position'],
-    );
+    final user = User();
+    user.serverId = json['id'];
+    user.name = json['name'];
+    user.cpf = json['cpf'];
+    user.position = json['position'];
+    return user;
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'id': serverId,
       'name': name,
       'cpf': cpf,
       'position': position,

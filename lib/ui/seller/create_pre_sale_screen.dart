@@ -10,6 +10,7 @@ import '../../model/charging.dart';
 import '../../services/pre_sale_service.dart';
 import '../../services/seller_service.dart';
 import '../../services/cpf_validator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class CreatePreSaleScreen extends StatefulWidget {
   final User user;
@@ -480,6 +481,8 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final uuid = const Uuid().v4(); // 👈 gera identificador único
+
       final client = Client(
         id: 0,
         name: _nameCtrl.text.trim(),
@@ -496,22 +499,29 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
         ),
       );
 
-      final seller = await _sellerService.getSellerByUserId(widget.user.id);
+      final seller = await _sellerService.getSellerByUserId(
+        widget.user.serverId,
+      );
+
+      print("oq to enviando aqui, ${widget.charging.serverId}");
 
       final preSale = PreSale(
+        uuidPreSale: uuid, // 👈 aqui
         preSaleDate: DateTime.now(),
         seller: seller,
         client: client,
         items: widget.selectedItems,
-        chargingId: widget.charging.id,
+        chargingId: widget.charging.serverId,
       );
 
       await _preSaleService.createPreSale(preSale);
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Pré-venda criada com sucesso!")),
       );
+
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(

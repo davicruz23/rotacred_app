@@ -19,6 +19,7 @@ class _InspectorScreenState extends State<InspectorScreen> {
   late final PageController _pageController;
   InspectorDTO? _inspector;
   bool _rotating = false;
+  bool _refreshing = false;
 
   @override
   void initState() {
@@ -35,7 +36,7 @@ class _InspectorScreenState extends State<InspectorScreen> {
 
   Future<void> _loadInspector() async {
     final inspector = await InspectorService().getInspectorByUserId(
-      widget.user.id,
+      widget.user.serverId,
     );
     if (mounted) {
       setState(() => _inspector = inspector);
@@ -72,6 +73,7 @@ class _InspectorScreenState extends State<InspectorScreen> {
             ),
           ],
         ),
+
         content: const Text(
           'Tem certeza de que deseja sair?',
           style: TextStyle(color: Colors.black54, fontSize: 15),
@@ -188,7 +190,28 @@ class _InspectorScreenState extends State<InspectorScreen> {
                         fontSize: 15,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTapDown: (_) => setState(() => _refreshing = true),
+                      onTapUp: (_) {
+                        Future.delayed(
+                          const Duration(milliseconds: 150),
+                          () async {
+                            setState(() => _refreshing = false);
+                            await _loadInspector();
+                          },
+                        );
+                      },
+                      child: AnimatedRotation(
+                        turns: _refreshing ? 0.5 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
                     GestureDetector(
                       onTapDown: (_) => setState(() => _rotating = true),
                       onTapUp: (_) {

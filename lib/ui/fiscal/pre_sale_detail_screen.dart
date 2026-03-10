@@ -259,13 +259,13 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  "R\$ ${item.unitPrice.toStringAsFixed(2)} un",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
+                                // Text(
+                                //   "R\$ ${item.unitPrice.toStringAsFixed(2)} un",
+                                //   style: TextStyle(
+                                //     fontSize: 13,
+                                //     color: Colors.grey.shade600,
+                                //   ),
+                                // ),
                               ],
                             ),
                           ],
