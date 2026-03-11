@@ -1,6 +1,15 @@
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:isar/isar.dart';
+import 'package:rotacred_app/database/database_service.dart';
+import 'package:rotacred_app/database/entities/inspector_local.dart';
+import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
 import 'package:rotacred_app/env/environment.dart';
+import 'package:rotacred_app/model/address.dart';
+import 'package:rotacred_app/model/client.dart';
+import 'package:rotacred_app/model/dto/seller_dto.dart';
+import 'package:rotacred_app/model/pre_sale_item.dart';
 import '../model/pre_sale.dart';
 import '../model/dto/inspector_dto.dart';
 import '../model/dto/inspector_history_pre_sale_dto.dart';
@@ -18,21 +27,157 @@ class InspectorService {
     };
   }
 
-  Future<List<PreSale>> getPendingPreSales(int inspectorId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/inspector/$inspectorId/pre-sales/pending'),
-      headers: headers,
-    );
+  Future<bool> _isOnline() async {
+    final result = await Connectivity().checkConnectivity();
+    return !result.contains(ConnectivityResult.none);
+  }
 
-    if (response.statusCode == 200) {
-      final List<dynamic> body = json.decode(response.body);
-      return body.map((json) => PreSale.fromJson(json)).toList();
-    } else {
-      throw Exception(
-        "Erro ao buscar pré-vendas pendentes (${response.statusCode})",
-      );
+  Future<InspectorDTO> getInspectorByUserId(int userId) async {
+    final isar = DatabaseService.isar;
+    final online = await _isOnline();
+
+    if (online) {
+      try {
+        final headers = await _getHeaders();
+        final response = await http.get(
+          Uri.parse('$baseUrl/inspector/by-user/$userId'),
+          headers: headers,
+        );
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonData = json.decode(response.body);
+          final inspector = InspectorDTO.fromJson(jsonData);
+
+          final inspectorLocal = InspectorLocal()
+            ..serverId = inspector.idInspector
+            ..userId = userId;
+
+          await isar.writeTxn(() async {
+            final existingInspector = await isar.inspectorLocals
+                .filter()
+                .userIdEqualTo(userId)
+                .findFirst();
+
+            if (existingInspector != null) {
+              inspectorLocal.id = existingInspector.id;
+            }
+
+            await isar.inspectorLocals.put(inspectorLocal);
+          });
+          return inspector;
+        }
+      } catch (e) {
+        print("Erro ao buscar Fiscal online: $e");
+      }
     }
+
+    final inspectorLocal = await isar.inspectorLocals
+        .filter()
+        .userIdEqualTo(userId)
+        .findFirst();
+
+    if (inspectorLocal == null) {
+      throw Exception("Fiscal não encontrado no banco local");
+    }
+
+    return InspectorDTO(idInspector: inspectorLocal.serverId ?? 0);
+  }
+
+  Future<List<PreSale>> getPendingPreSales(int inspectorId) async {
+    final isar = DatabaseService.isar;
+    final online = await _isOnline();
+
+    if (online) {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/inspector/$inspectorId/pre-sales/pending'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> body = json.decode(response.body);
+        final preSales = body.map((json) => PreSale.fromJson(json)).toList();
+
+        await isar.writeTxn(() async {
+          final localList = await isar.inspectorPreSaleLocals
+              .filter()
+              .inspectorIdEqualTo(inspectorId)
+              .findAll();
+
+          final serverIds = preSales.map((e) => e.id).toSet();
+
+          for (final local in localList) {
+            if (!serverIds.contains(local.serverId)) {
+              await isar.inspectorPreSaleLocals.delete(local.id);
+            }
+          }
+
+          for (final preSale in preSales) {
+            final existing = await isar.inspectorPreSaleLocals
+                .filter()
+                .serverIdEqualTo(preSale.id!)
+                .and()
+                .inspectorIdEqualTo(inspectorId)
+                .findFirst();
+
+            final local = InspectorPreSaleLocal.fromPreSale(
+              preSale,
+              inspectorId,
+            );
+
+            if (existing != null) {
+              local.id = existing.id;
+            }
+
+            await isar.inspectorPreSaleLocals.put(local);
+          }
+        });
+
+        return preSales;
+      }
+    }
+
+    // OFFLINE → carregar do Isar
+    final localList = await isar.inspectorPreSaleLocals
+        .filter()
+        .inspectorIdEqualTo(inspectorId)
+        .findAll();
+
+    return localList.map((local) {
+      final items = (jsonDecode(local.itemsJson) as List)
+          .map((e) => PreSaleItem.fromJson(e))
+          .toList();
+
+      return PreSale(
+        id: local.serverId,
+        preSaleDate: local.preSaleDate,
+        seller: SellerDTO(
+          idSeller: local.sellerId,
+          nomeSeller: local.sellerName,
+        ),
+        client: Client(
+          id: local.clientId,
+          name: local.clientName,
+          cpf: local.clientCpf,
+          phone: local.clientPhone,
+          address: Address(
+            id: 0,
+            state: local.clientState,
+            city: local.clientCity,
+            street: local.clientStreet,
+            number: local.clientNumber,
+            zipCode: local.clientZipCode,
+            complement: local.clientComplement,
+          ),
+        ),
+        items: items,
+        inspector: null,
+        status: local.status,
+        chargingId: null,
+        totalPreSale: local.totalPreSale,
+        uuidPreSale: '',
+      );
+    }).toList();
   }
 
   Future<void> approvePreSale({
@@ -75,26 +220,15 @@ class InspectorService {
     }
   }
 
-  Future<InspectorDTO> getInspectorByUserId(int userId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/inspector/by-user/$userId'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-      return InspectorDTO.fromJson(jsonData);
-    } else {
-      throw Exception(
-        'Erro ao buscar Inspector pelo usuário (${response.statusCode})',
-      );
-    }
-  }
-
   Future<List<InspectorHistoryPreSaleDto>> getHistoryByInspectorId(
     int inspectorId,
   ) async {
+    final online = await _isOnline();
+
+    if (!online) {
+      return [];
+    }
+
     final headers = await _getHeaders();
     final url = Uri.parse('$baseUrl/inspector/$inspectorId/pre-sales-history');
     final response = await http.get(url, headers: headers);

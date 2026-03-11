@@ -11,6 +11,4 @@ class InspectorLocal {
 
   @Index(unique: true)
   late int userId;
-
-  late String userName;
 }

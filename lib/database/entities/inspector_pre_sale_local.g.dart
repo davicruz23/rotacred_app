@@ -78,38 +78,33 @@ const InspectorPreSaleLocalSchema = CollectionSchema(
       name: r'itemsJson',
       type: IsarType.string,
     ),
-    r'pendingSync': PropertySchema(
-      id: 12,
-      name: r'pendingSync',
-      type: IsarType.bool,
-    ),
     r'preSaleDate': PropertySchema(
-      id: 13,
+      id: 12,
       name: r'preSaleDate',
       type: IsarType.dateTime,
     ),
     r'sellerId': PropertySchema(
-      id: 14,
+      id: 13,
       name: r'sellerId',
       type: IsarType.long,
     ),
     r'sellerName': PropertySchema(
-      id: 15,
+      id: 14,
       name: r'sellerName',
       type: IsarType.string,
     ),
     r'serverId': PropertySchema(
-      id: 16,
+      id: 15,
       name: r'serverId',
       type: IsarType.long,
     ),
     r'status': PropertySchema(
-      id: 17,
+      id: 16,
       name: r'status',
       type: IsarType.string,
     ),
     r'totalPreSale': PropertySchema(
-      id: 18,
+      id: 17,
       name: r'totalPreSale',
       type: IsarType.double,
     )
@@ -167,13 +162,12 @@ void _inspectorPreSaleLocalSerialize(
   writer.writeString(offsets[9], object.clientZipCode);
   writer.writeLong(offsets[10], object.inspectorId);
   writer.writeString(offsets[11], object.itemsJson);
-  writer.writeBool(offsets[12], object.pendingSync);
-  writer.writeDateTime(offsets[13], object.preSaleDate);
-  writer.writeLong(offsets[14], object.sellerId);
-  writer.writeString(offsets[15], object.sellerName);
-  writer.writeLong(offsets[16], object.serverId);
-  writer.writeString(offsets[17], object.status);
-  writer.writeDouble(offsets[18], object.totalPreSale);
+  writer.writeDateTime(offsets[12], object.preSaleDate);
+  writer.writeLong(offsets[13], object.sellerId);
+  writer.writeString(offsets[14], object.sellerName);
+  writer.writeLong(offsets[15], object.serverId);
+  writer.writeString(offsets[16], object.status);
+  writer.writeDouble(offsets[17], object.totalPreSale);
 }
 
 InspectorPreSaleLocal _inspectorPreSaleLocalDeserialize(
@@ -196,13 +190,12 @@ InspectorPreSaleLocal _inspectorPreSaleLocalDeserialize(
   object.id = id;
   object.inspectorId = reader.readLong(offsets[10]);
   object.itemsJson = reader.readString(offsets[11]);
-  object.pendingSync = reader.readBool(offsets[12]);
-  object.preSaleDate = reader.readDateTime(offsets[13]);
-  object.sellerId = reader.readLong(offsets[14]);
-  object.sellerName = reader.readString(offsets[15]);
-  object.serverId = reader.readLong(offsets[16]);
-  object.status = reader.readString(offsets[17]);
-  object.totalPreSale = reader.readDouble(offsets[18]);
+  object.preSaleDate = reader.readDateTime(offsets[12]);
+  object.sellerId = reader.readLong(offsets[13]);
+  object.sellerName = reader.readString(offsets[14]);
+  object.serverId = reader.readLong(offsets[15]);
+  object.status = reader.readString(offsets[16]);
+  object.totalPreSale = reader.readDouble(offsets[17]);
   return object;
 }
 
@@ -238,18 +231,16 @@ P _inspectorPreSaleLocalDeserializeProp<P>(
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
-      return (reader.readBool(offset)) as P;
-    case 13:
       return (reader.readDateTime(offset)) as P;
+    case 13:
+      return (reader.readLong(offset)) as P;
     case 14:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 15:
-      return (reader.readString(offset)) as P;
-    case 16:
       return (reader.readLong(offset)) as P;
-    case 17:
+    case 16:
       return (reader.readString(offset)) as P;
-    case 18:
+    case 17:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1902,16 +1893,6 @@ extension InspectorPreSaleLocalQueryFilter on QueryBuilder<
   }
 
   QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal,
-      QAfterFilterCondition> pendingSyncEqualTo(bool value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'pendingSync',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal,
       QAfterFilterCondition> preSaleDateEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -2599,20 +2580,6 @@ extension InspectorPreSaleLocalQuerySortBy
   }
 
   QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
-      sortByPendingSync() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pendingSync', Sort.asc);
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
-      sortByPendingSyncDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pendingSync', Sort.desc);
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
       sortByPreSaleDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'preSaleDate', Sort.asc);
@@ -2882,20 +2849,6 @@ extension InspectorPreSaleLocalQuerySortThenBy
   }
 
   QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
-      thenByPendingSync() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pendingSync', Sort.asc);
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
-      thenByPendingSyncDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pendingSync', Sort.desc);
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QAfterSortBy>
       thenByPreSaleDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'preSaleDate', Sort.asc);
@@ -3069,13 +3022,6 @@ extension InspectorPreSaleLocalQueryWhereDistinct
   }
 
   QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QDistinct>
-      distinctByPendingSync() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'pendingSync');
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, InspectorPreSaleLocal, QDistinct>
       distinctByPreSaleDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'preSaleDate');
@@ -3207,13 +3153,6 @@ extension InspectorPreSaleLocalQueryProperty on QueryBuilder<
       itemsJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'itemsJson');
-    });
-  }
-
-  QueryBuilder<InspectorPreSaleLocal, bool, QQueryOperations>
-      pendingSyncProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'pendingSync');
     });
   }
 

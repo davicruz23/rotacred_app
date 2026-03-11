@@ -30,7 +30,6 @@ class InspectorPreSaleLocal {
   late String status;
 
   late String itemsJson;
-  bool pendingSync = true;
   
   InspectorPreSaleLocal();
   factory InspectorPreSaleLocal.fromPreSale(PreSale preSale, int inspectorId) {
@@ -52,7 +51,6 @@ class InspectorPreSaleLocal {
       ..preSaleDate = preSale.preSaleDate
       ..totalPreSale = preSale.totalPreSale ?? 0
       ..status = preSale.status ?? 'PENDENTE'
-      ..itemsJson = jsonEncode(preSale.items.map((e) => e.toJson()).toList())
-      ..pendingSync = true;
+      ..itemsJson = jsonEncode(preSale.items.map((e) => e.toJson()).toList());
   }
 }

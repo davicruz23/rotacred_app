@@ -23,7 +23,7 @@ class SellerService {
 
   Future<bool> _isOnline() async {
     final result = await Connectivity().checkConnectivity();
-    return result != ConnectivityResult.none;
+    return !result.contains(ConnectivityResult.none) ;
   }
 
   Future<SellerDTO> getSellerByUserId(int userId) async {
