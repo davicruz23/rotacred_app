@@ -630,28 +630,37 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                     // Parcelas
                     if (paymentMethod == "PARCEL" ||
                         paymentMethod == "CASH") ...[
-                      TextFormField(
-                        initialValue: installments.toString(),
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: "Parcelas (se houver)",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Parcelas",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
                           ),
                         ),
-                        onChanged: (val) {
-                          setState(() {
-                            installments = int.tryParse(val) ?? 0;
-                          });
-                        },
+                      ),
+                      const SizedBox(height: 8),
+
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: List.generate(10, (index) {
+                          final value = index + 1;
+
+                          return ChoiceChip(
+                            label: Text("${value}x"),
+                            selected: installments == value,
+                            onSelected: (_) {
+                              setState(() {
+                                installments = value;
+                              });
+                            },
+                          );
+                        }),
                       ),
                       const SizedBox(height: 16),
                     ],
-
                     // Ações
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

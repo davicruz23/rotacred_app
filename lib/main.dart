@@ -15,7 +15,7 @@ void main() async {
   NetworkService().startListening();
 
   /// executa sync ao abrir app
-  SyncService().syncPreSales();
+  SyncService().syncAll();
 
   runApp(const MainApp());
 }

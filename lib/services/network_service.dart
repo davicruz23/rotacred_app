@@ -5,21 +5,19 @@ class NetworkService {
   final Connectivity _connectivity = Connectivity();
 
   void startListening() async {
-    /// 👇 verifica imediatamente
     final result = await _connectivity.checkConnectivity();
 
     if (result.contains(ConnectivityResult.wifi) ||
         result.contains(ConnectivityResult.mobile)) {
       print("🌐 Internet já disponível, iniciando sincronização...");
-      SyncService().syncPreSales();
+      SyncService().syncAll();
     }
 
-    /// 👇 escuta mudanças
     _connectivity.onConnectivityChanged.listen((result) {
       if (result.contains(ConnectivityResult.wifi) ||
           result.contains(ConnectivityResult.mobile)) {
         print("🌐 Internet detectada, iniciando sincronização...");
-        SyncService().syncPreSales();
+        SyncService().syncAll();
       }
     });
   }

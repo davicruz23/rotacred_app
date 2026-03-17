@@ -21,6 +21,10 @@ class _InspectorScreenState extends State<InspectorScreen> {
   bool _rotating = false;
   bool _refreshing = false;
 
+  // 🔥 KEY PARA CONTROLAR A TELA DE PENDENTES
+  final GlobalKey<InspectorPendingPreSalesScreenState> _pendingKey =
+      GlobalKey<InspectorPendingPreSalesScreenState>();
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +77,6 @@ class _InspectorScreenState extends State<InspectorScreen> {
             ),
           ],
         ),
-
         content: const Text(
           'Tem certeza de que deseja sair?',
           style: TextStyle(color: Colors.black54, fontSize: 15),
@@ -132,7 +135,10 @@ class _InspectorScreenState extends State<InspectorScreen> {
     }
 
     final tabs = [
-      InspectorPendingPreSalesScreen(inspectorId: _inspector!.idInspector),
+      InspectorPendingPreSalesScreen(
+        key: _pendingKey,
+        inspectorId: _inspector!.idInspector,
+      ),
       InspectorHistoryPreSalesScreen(inspectorId: _inspector!.idInspector),
     ];
 
@@ -153,12 +159,9 @@ class _InspectorScreenState extends State<InspectorScreen> {
             ),
           ),
         ),
-        titleSpacing: 0,
         title: Row(
           children: [
             const SizedBox(width: 12),
-            //const Icon(Icons.badge, color: Colors.white),
-            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 "Fiscal",
@@ -167,7 +170,6 @@ class _InspectorScreenState extends State<InspectorScreen> {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -177,59 +179,58 @@ class _InspectorScreenState extends State<InspectorScreen> {
             padding: const EdgeInsets.only(right: 12),
             child: Row(
               children: [
-                //const Icon(Icons.person, color: Colors.white70),
-                const SizedBox(width: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.person_outline, color: Colors.white70),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.user.name,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
-                      ),
+                const Icon(Icons.person_outline, color: Colors.white70),
+                const SizedBox(width: 8),
+                Text(
+                  widget.user.name,
+                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                const SizedBox(width: 12),
+
+                /// 🔥 REFRESH COMPLETO
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _refreshing = true),
+                  onTapUp: (_) {
+                    Future.delayed(const Duration(milliseconds: 150), () async {
+                      setState(() => _refreshing = false);
+
+                      // 🔥 atualiza dados do inspector
+                      await _loadInspector();
+
+                      // 🔥 só chama se estiver na aba de pendentes
+                      if (_selectedIndex == 0) {
+                        await _pendingKey.currentState?.reload();
+                      }
+                    });
+                  },
+                  child: AnimatedRotation(
+                    turns: _refreshing ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _refreshing = true),
-                      onTapUp: (_) {
-                        Future.delayed(
-                          const Duration(milliseconds: 150),
-                          () async {
-                            setState(() => _refreshing = false);
-                            await _loadInspector();
-                          },
-                        );
-                      },
-                      child: AnimatedRotation(
-                        turns: _refreshing ? 0.5 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        child: const Icon(
-                          Icons.refresh_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
+                  ),
+                ),
+
+                const SizedBox(width: 20),
+
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _rotating = true),
+                  onTapUp: (_) {
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      setState(() => _rotating = false);
+                      _logout();
+                    });
+                  },
+                  child: AnimatedRotation(
+                    turns: _rotating ? 0.25 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 20),
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _rotating = true),
-                      onTapUp: (_) {
-                        Future.delayed(const Duration(milliseconds: 150), () {
-                          setState(() => _rotating = false);
-                          _logout();
-                        });
-                      },
-                      child: AnimatedRotation(
-                        turns: _rotating ? 0.25 : 0.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: const Icon(
-                          Icons.logout_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -245,29 +246,18 @@ class _InspectorScreenState extends State<InspectorScreen> {
         children: tabs,
       ),
 
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, -1),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.blueAccent,
-          unselectedItemColor: Colors.grey,
-          currentIndex: _selectedIndex,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          onTap: _onTabSelected,
-          items: List.generate(
-            tabs.length,
-            (i) => BottomNavigationBarItem(
-              icon: Icon(tabIcons[i]),
-              label: tabTitles[i],
-            ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        onTap: _onTabSelected,
+        items: List.generate(
+          tabs.length,
+          (i) => BottomNavigationBarItem(
+            icon: Icon(tabIcons[i]),
+            label: tabTitles[i],
           ),
         ),
       ),

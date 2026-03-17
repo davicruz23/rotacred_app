@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
+import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
 import 'package:rotacred_app/model/address.dart';
 import 'package:rotacred_app/model/charging.dart';
 import 'package:rotacred_app/model/client.dart';
@@ -20,6 +21,7 @@ class SyncService {
   final AuthService _authService = AuthService();
 
   bool _isSyncing = false;
+  bool _isSyncingApprovals = false;
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getToken();
@@ -37,7 +39,7 @@ class SyncService {
 
   /// sincroniza todas as pré-vendas offline
   Future<void> syncPreSales() async {
-    print("Sync iniciado");
+    print("Sync iniciado de Pré-Vendas");
 
     if (_isSyncing) return;
 
@@ -144,5 +146,67 @@ class SyncService {
     } finally {
       _isSyncing = false;
     }
+  }
+
+  Future<void> syncInspectorApprovals() async {
+    if (_isSyncingApprovals) return;
+
+    final online = await _isOnline();
+    if (!online) return;
+
+    _isSyncingApprovals = true;
+
+    final isar = DatabaseService.isar;
+
+    try {
+      final pending = await isar.inspectorApproveLocals.where().findAll();
+
+      for (final item in pending) {
+        try {
+          final headers = await _getHeaders();
+
+          final response = await http.post(
+            Uri.parse("$baseUrl/inspector/pre-sales/${item.preSaleId}/approve"),
+            headers: headers,
+            body: jsonEncode({
+              "inspectorId": item.inspectorId,
+              "paymentMethod": item.paymentMethod,
+              "installments": item.installments,
+              "cashPaid": item.cashPaid ?? 0,
+              "latitude": item.latitude,
+              "longitude": item.longitude,
+            }),
+          );
+
+          if (response.statusCode == 200) {
+            await isar.writeTxn(() async {
+              await isar.inspectorApproveLocals.delete(item.id);
+
+              await isar.preSaleLocals.delete(item.preSaleId);
+
+              final items = await isar.preSaleItemLocals
+                  .filter()
+                  .preSaleLocalIdEqualTo(item.preSaleId)
+                  .findAll();
+
+              for (final i in items) {
+                await isar.preSaleItemLocals.delete(i.id);
+              }
+            });
+
+            print("✅ Approve ${item.id} sincronizado e removido");
+          }
+        } catch (e) {
+          print("Erro approve ${item.id}: $e");
+        }
+      }
+    } finally {
+      _isSyncingApprovals = false;
+    }
+  }
+
+  Future<void> syncAll() async {
+    await syncPreSales();
+    await syncInspectorApprovals();
   }
 }

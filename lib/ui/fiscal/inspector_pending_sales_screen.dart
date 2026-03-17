@@ -9,21 +9,31 @@ class InspectorPendingPreSalesScreen extends StatefulWidget {
 
   @override
   State<InspectorPendingPreSalesScreen> createState() =>
-      _InspectorPendingPreSalesScreenState();
+      InspectorPendingPreSalesScreenState();
 }
 
-class _InspectorPendingPreSalesScreenState
+class InspectorPendingPreSalesScreenState
     extends State<InspectorPendingPreSalesScreen> {
   late Future<List<PreSale>> _futurePreSales;
 
   @override
   void initState() {
     super.initState();
-    _loadPreSales();
+    _futurePreSales = _loadPreSales(); // 🔥 CORRETO
   }
 
-  void _loadPreSales() {
-    _futurePreSales = InspectorService().getPendingPreSales(widget.inspectorId);
+  // 🔥 CARREGA OS DADOS
+  Future<List<PreSale>> _loadPreSales() {
+    return InspectorService().getPendingPreSales(widget.inspectorId);
+  }
+
+  // 🔥 RELOAD REAL (AGORA FUNCIONA DE VERDADE)
+  Future<void> reload() async {
+    if (!mounted) return;
+
+    setState(() {
+      _futurePreSales = _loadPreSales();
+    });
   }
 
   @override
@@ -77,8 +87,9 @@ class _InspectorPendingPreSalesScreenState
                     ),
                   );
 
+                  // 🔥 RELOAD APÓS VOLTAR
                   if (result == true) {
-                    setState(() => _loadPreSales());
+                    await reload();
                   }
                 },
                 child: Card(
