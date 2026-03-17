@@ -6,6 +6,7 @@ import 'package:rotacred_app/database/database_service.dart';
 import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
 import 'package:rotacred_app/database/entities/inspector_local.dart';
 import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
+import 'package:rotacred_app/database/entities/inspector_reject_local.dart';
 import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/address.dart';
 import 'package:rotacred_app/model/client.dart';
@@ -87,7 +88,7 @@ class InspectorService {
   Future<List<PreSale>> getPendingPreSales(int inspectorId) async {
     final isar = DatabaseService.isar;
 
-    // 🔥 SINCRONIZA E REMOVE LOCAL IMEDIATAMENTE
+    // 🔥 1. SINCRONIZA APROVAÇÕES LOCAIS
     final pendingApprovals = await isar.inspectorApproveLocals
         .where()
         .findAll();
@@ -111,10 +112,10 @@ class InspectorService {
 
         if (response.statusCode == 200) {
           await isar.writeTxn(() async {
-            // remove approve
+            // remove fila de sync
             await isar.inspectorApproveLocals.delete(item.id);
 
-            // 🔥 remove da lista do inspector (RESOLVE TEU PROBLEMA)
+            // 🔥 REMOVE DO BANCO (COMO VOCÊ DEFINIU)
             final local = await isar.inspectorPreSaleLocals
                 .filter()
                 .serverIdEqualTo(item.preSaleId)
@@ -132,6 +133,7 @@ class InspectorService {
 
     final online = await isOnline();
 
+    // 🔥 2. ONLINE → BUSCA DO SERVIDOR
     if (online) {
       final headers = await _getHeaders();
       final response = await http.get(
@@ -151,12 +153,14 @@ class InspectorService {
 
           final serverIds = preSales.map((e) => e.id).toSet();
 
+          // 🔥 REMOVE O QUE NÃO EXISTE MAIS NO SERVIDOR
           for (final local in localList) {
             if (!serverIds.contains(local.serverId)) {
               await isar.inspectorPreSaleLocals.delete(local.id);
             }
           }
 
+          // 🔥 INSERE/ATUALIZA COMO PENDENTE
           for (final preSale in preSales) {
             final existing = await isar.inspectorPreSaleLocals
                 .filter()
@@ -170,6 +174,8 @@ class InspectorService {
               inspectorId,
             );
 
+            local.status = "PENDENTE"; // 🔥 GARANTE STATUS CORRETO
+
             if (existing != null) {
               local.id = existing.id;
             }
@@ -182,10 +188,12 @@ class InspectorService {
       }
     }
 
-    // OFFLINE
+    // 🔥 3. OFFLINE → FILTRA APENAS PENDENTES
     final localList = await isar.inspectorPreSaleLocals
         .filter()
         .inspectorIdEqualTo(inspectorId)
+        .and()
+        .statusEqualTo("PENDENTE") // 🔥 ESSENCIAL
         .findAll();
 
     return localList.map((local) {
@@ -255,6 +263,20 @@ class InspectorService {
         );
 
         if (response.statusCode == 200) {
+          // 🔥 ONLINE → já pode remover direto
+          await isar.writeTxn(() async {
+            final local = await isar.inspectorPreSaleLocals
+                .filter()
+                .serverIdEqualTo(preSaleId)
+                .and()
+                .inspectorIdEqualTo(inspectorId)
+                .findFirst();
+
+            if (local != null) {
+              await isar.inspectorPreSaleLocals.delete(local.id);
+            }
+          });
+
           return;
         }
       } catch (e) {
@@ -262,8 +284,8 @@ class InspectorService {
       }
     }
 
-    // OFFLINE → salvar no Isar
-    final local = InspectorApproveLocal()
+    // 🔥 OFFLINE → salvar fila + atualizar status
+    final approve = InspectorApproveLocal()
       ..preSaleId = preSaleId
       ..inspectorId = inspectorId
       ..paymentMethod = paymentMethod
@@ -274,20 +296,74 @@ class InspectorService {
       ..createdAt = DateTime.now();
 
     await isar.writeTxn(() async {
-      await isar.inspectorApproveLocals.put(local);
+      // salva fila de sync
+      await isar.inspectorApproveLocals.put(approve);
+
+      // 🔥 AQUI ESTÁ O MAIS IMPORTANTE
+      final local = await isar.inspectorPreSaleLocals
+          .filter()
+          .serverIdEqualTo(preSaleId)
+          .and()
+          .inspectorIdEqualTo(inspectorId)
+          .findFirst();
+
+      if (local != null) {
+        local.status = "APROVADO"; // 🔥 MUDA STATUS
+        await isar.inspectorPreSaleLocals.put(local);
+      }
     });
   }
 
   Future<void> rejectPreSale(int preSaleId) async {
-    final headers = await _getHeaders();
-    final response = await http.post(
-      Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/reject"),
-      headers: headers,
-    );
+    final isar = DatabaseService.isar;
+    final online = await isOnline();
 
-    if (response.statusCode != 200) {
-      throw Exception("Erro ao recusar pré-venda (${response.statusCode})");
+    if (online) {
+      try {
+        final headers = await _getHeaders();
+
+        final response = await http.post(
+          Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/reject"),
+          headers: headers,
+        );
+
+        if (response.statusCode == 200) {
+          // 🔥 remove direto do banco local
+          await isar.writeTxn(() async {
+            final local = await isar.inspectorPreSaleLocals
+                .filter()
+                .serverIdEqualTo(preSaleId)
+                .findFirst();
+
+            if (local != null) {
+              await isar.inspectorPreSaleLocals.delete(local.id);
+            }
+          });
+
+          return;
+        }
+      } catch (e) {
+        print("Erro online reject: $e");
+      }
     }
+
+    // 🔥 OFFLINE → salva fila + muda status
+    final reject = InspectorRejectLocal()
+      ..preSaleId = preSaleId;
+
+    await isar.writeTxn(() async {
+      await isar.inspectorRejectLocals.put(reject);
+
+      final local = await isar.inspectorPreSaleLocals
+          .filter()
+          .serverIdEqualTo(preSaleId)
+          .findFirst();
+
+      if (local != null) {
+        local.status = "RECUSADA"; // 🔥 AQUI
+        await isar.inspectorPreSaleLocals.put(local);
+      }
+    });
   }
 
   Future<List<InspectorHistoryPreSaleDto>> getHistoryByInspectorId(

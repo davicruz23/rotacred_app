@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
 import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
+import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
+import 'package:rotacred_app/database/entities/inspector_reject_local.dart';
 import 'package:rotacred_app/model/address.dart';
 import 'package:rotacred_app/model/charging.dart';
 import 'package:rotacred_app/model/client.dart';
@@ -22,6 +24,7 @@ class SyncService {
 
   bool _isSyncing = false;
   bool _isSyncingApprovals = false;
+  bool _isSyncingRejects = false;
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getToken();
@@ -205,8 +208,58 @@ class SyncService {
     }
   }
 
+  Future<void> syncInspectorRejects() async {
+    if (_isSyncingRejects) return;
+
+    final online = await _isOnline();
+    if (!online) return;
+
+    _isSyncingRejects = true;
+
+    final isar = DatabaseService.isar;
+
+    try {
+      final pending = await isar.inspectorRejectLocals.where().findAll();
+
+      for (final item in pending) {
+        try {
+          final headers = await _getHeaders();
+
+          final response = await http.post(
+            Uri.parse("$baseUrl/inspector/pre-sales/${item.preSaleId}/reject"),
+            headers: headers,
+          );
+
+          if (response.statusCode == 200) {
+            await isar.writeTxn(() async {
+              // 🔥 remove da fila de sync
+              await isar.inspectorRejectLocals.delete(item.id);
+
+              // 🔥 remove a pre-sale local
+              final local = await isar.inspectorPreSaleLocals
+                  .filter()
+                  .serverIdEqualTo(item.preSaleId)
+                  .findFirst();
+
+              if (local != null) {
+                await isar.inspectorPreSaleLocals.delete(local.id);
+              }
+            });
+
+            print("❌ Reject ${item.id} sincronizado e removido");
+          }
+        } catch (e) {
+          print("Erro reject ${item.id}: $e");
+        }
+      }
+    } finally {
+      _isSyncingRejects = false;
+    }
+  }
+
   Future<void> syncAll() async {
     await syncPreSales();
     await syncInspectorApprovals();
+    await syncInspectorRejects();
   }
 }

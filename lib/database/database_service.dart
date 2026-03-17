@@ -4,6 +4,7 @@ import 'package:rotacred_app/database/entities/client_local.dart';
 import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
 import 'package:rotacred_app/database/entities/inspector_local.dart';
 import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
+import 'package:rotacred_app/database/entities/inspector_reject_local.dart';
 import 'package:rotacred_app/database/entities/pre_sale_item_local.dart';
 import 'package:rotacred_app/database/entities/pre_sale_local.dart';
 import 'package:rotacred_app/database/entities/seller_local.dart';
@@ -29,6 +30,7 @@ class DatabaseService {
         InspectorLocalSchema,
         InspectorPreSaleLocalSchema,
         InspectorApproveLocalSchema,
+        InspectorRejectLocalSchema,
       ],
       directory: dir.path,
       inspector: true,
