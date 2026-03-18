@@ -255,23 +255,38 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                   child: TextFormField(
                     controller: _cpfCtrl,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: _inputDecoration(
-                      "CPF *",
-                      Icons.badge,
-                    ).copyWith(errorText: _cpfErro),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11),
+                    ],
+                    decoration: _inputDecoration("CPF *", Icons.badge).copyWith(
+                      errorText: _cpfErro,
+                    ),
+
                     onChanged: (v) async {
-                      if (v.length < 11) {
-                        setState(() => _cpfErro = null);
+                      final cpf = v;
+
+                      if (cpf.length < 11) {
+                        if (_cpfErro != null) {
+                          setState(() => _cpfErro = null);
+                        }
                         return;
                       }
-                      if (v.length == 11 && !_validandoCpf) {
+                      if (cpf.length == 11 && !_validandoCpf) {
                         _validandoCpf = true;
 
-                        final valido = await _cpfValidatorService.validarCpf(v);
+                        final resultado = await _cpfValidatorService.validarCpf(
+                          cpf,
+                        );
+
+                        if (!mounted) return;
 
                         setState(() {
-                          _cpfErro = valido ? null : 'CPF inválido';
+                          if (resultado == null) {
+                            _cpfErro = null;
+                          } else {
+                            _cpfErro = resultado ? null : 'CPF inválido';
+                          }
                         });
 
                         _validandoCpf = false;

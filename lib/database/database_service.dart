@@ -16,24 +16,33 @@ class DatabaseService {
   static late Isar isar;
 
   static Future<void> init() async {
-    final dir = await getApplicationDocumentsDirectory();
+    try {
+      final dir = await getApplicationDocumentsDirectory();
 
-    isar = await Isar.open(
-      [
-        ChargingSchema,
-        ChargingItemSchema,
-        UserSchema,
-        PreSaleLocalSchema,
-        PreSaleItemLocalSchema,
-        ClientLocalSchema,
-        SellerLocalSchema,
-        InspectorLocalSchema,
-        InspectorPreSaleLocalSchema,
-        InspectorApproveLocalSchema,
-        InspectorRejectLocalSchema,
-      ],
-      directory: dir.path,
-      inspector: true,
-    );
+      print("📂 DIR: ${dir.path}");
+
+      isar = await Isar.open(
+        [
+          ChargingSchema,
+          ChargingItemSchema,
+          UserSchema,
+          PreSaleLocalSchema,
+          PreSaleItemLocalSchema,
+          ClientLocalSchema,
+          SellerLocalSchema,
+          InspectorLocalSchema,
+          InspectorPreSaleLocalSchema,
+          InspectorApproveLocalSchema,
+          InspectorRejectLocalSchema,
+        ],
+        directory: dir.path,
+        inspector: true,
+      );
+
+      print("✅ ISAR ABERTO COM SUCESSO");
+    } catch (e, stack) {
+      print("💣 ERRO AO ABRIR ISAR: $e");
+      print(stack);
+    }
   }
 }

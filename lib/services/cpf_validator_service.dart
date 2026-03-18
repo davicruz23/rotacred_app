@@ -5,7 +5,6 @@ import '../env/environment.dart';
 import 'auth_service.dart';
 
 class CpfValidatorService {
-
   final String baseUrl = Environment.apiBaseUrl;
   final AuthService _authService = AuthService();
 
@@ -17,23 +16,20 @@ class CpfValidatorService {
     };
   }
 
-  Future<bool> _isOnline() async {
+  Future<bool> isOnline() async {
     final connectivity = await Connectivity().checkConnectivity();
     return connectivity != ConnectivityResult.none;
   }
 
-  Future<bool> validarCpf(String cpf) async {
-
-    /// se estiver offline, não chama API
-    final online = await _isOnline();
+  Future<bool?> validarCpf(String cpf) async {
+    final online = await isOnline();
 
     if (!online) {
       print("📴 Offline - pulando validação de CPF");
-      return true; // permite seguir com a venda offline
+      return null; // 🔥 mudou aqui
     }
 
     try {
-
       final response = await http.get(
         Uri.parse('$baseUrl/cpf/validar/$cpf'),
         headers: await _getHeaders(),
@@ -43,15 +39,10 @@ class CpfValidatorService {
         return response.body.toLowerCase() == 'true';
       }
 
-      return false;
-
+      return null; // 🔥 não assume erro
     } catch (e) {
-
       print("Erro ao validar CPF: $e");
-      return false;
-
+      return null; // 🔥 não assume erro
     }
-
   }
-
 }
