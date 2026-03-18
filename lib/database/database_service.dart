@@ -1,6 +1,7 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rotacred_app/database/entities/client_local.dart';
+import 'package:rotacred_app/database/entities/collector_local.dart';
 import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
 import 'package:rotacred_app/database/entities/inspector_local.dart';
 import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
@@ -34,6 +35,7 @@ class DatabaseService {
           InspectorPreSaleLocalSchema,
           InspectorApproveLocalSchema,
           InspectorRejectLocalSchema,
+          CollectorLocalSchema,
         ],
         directory: dir.path,
         inspector: true,

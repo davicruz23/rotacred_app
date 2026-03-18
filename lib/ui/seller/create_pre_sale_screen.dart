@@ -259,9 +259,10 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(11),
                     ],
-                    decoration: _inputDecoration("CPF *", Icons.badge).copyWith(
-                      errorText: _cpfErro,
-                    ),
+                    decoration: _inputDecoration(
+                      "CPF *",
+                      Icons.badge,
+                    ).copyWith(errorText: _cpfErro),
 
                     onChanged: (v) async {
                       final cpf = v;
@@ -548,42 +549,35 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
   }
 
   Future<void> _buscarCepEPreencher(String cep) async {
-    try {
-      final data = await _cepService.buscarPorCep(cep);
+    final data = await _cepService.buscarPorCep(cep);
 
-      debugPrint('CEP retornou: $data');
-
-      // Atualiza os controladores
-      setState(() {
-        _streetCtrl.text = data['street'] ?? data['logradouro'] ?? '';
-        _cityCtrl.text = data['city'] ?? data['localidade'] ?? '';
-
-        final estadoRetornado = data['state'] ?? data['uf'] ?? '';
-        if (estadoRetornado.isNotEmpty) {
-          _selectedState = estadoRetornado.toUpperCase();
-          _stateCtrl.text = _selectedState;
-        }
-
-        FocusScope.of(context).requestFocus(FocusNode());
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_numberCtrl.text.isEmpty) {
-            FocusScope.of(context).requestFocus(FocusNode());
-            Future.delayed(Duration(milliseconds: 100), () {
-              FocusScope.of(context).requestFocus(FocusNode());
-            });
-          }
-        });
-      });
-    } catch (e, stack) {
-      debugPrint('❌ Erro ao buscar CEP: $e');
-      debugPrint(stack.toString());
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ CEP não encontrado ou erro na consulta"),
-          duration: Duration(seconds: 2),
-        ),
-      );
+    // 🔥 se for null → offline ou erro → NÃO FAZ NADA
+    if (data == null) {
+      return;
     }
+
+    debugPrint('CEP retornou: $data');
+
+    setState(() {
+      _streetCtrl.text = data['street'] ?? data['logradouro'] ?? '';
+      _cityCtrl.text = data['city'] ?? data['localidade'] ?? '';
+
+      final estadoRetornado = data['state'] ?? data['uf'] ?? '';
+      if (estadoRetornado.isNotEmpty) {
+        _selectedState = estadoRetornado.toUpperCase();
+        _stateCtrl.text = _selectedState;
+      }
+
+      FocusScope.of(context).requestFocus(FocusNode());
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_numberCtrl.text.isEmpty) {
+          FocusScope.of(context).requestFocus(FocusNode());
+          Future.delayed(const Duration(milliseconds: 100), () {
+            FocusScope.of(context).requestFocus(FocusNode());
+          });
+        }
+      });
+    });
   }
 }

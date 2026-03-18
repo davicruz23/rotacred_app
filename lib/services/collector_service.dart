@@ -1,5 +1,10 @@
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:isar/isar.dart';
+import 'package:rotacred_app/database/database_service.dart';
+import 'package:rotacred_app/database/entities/collector_local.dart';
+import 'package:rotacred_app/database/entities/inspector_local.dart';
 import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/dto/collector_dto.dart';
 import '../model/dto/sale_collector_dto.dart';
@@ -16,6 +21,11 @@ class CollectorService {
       "Content-Type": "application/json",
       "Authorization": "Bearer $token",
     };
+  }
+
+  Future<bool> isOnline() async {
+    final result = await Connectivity().checkConnectivity();
+    return !result.contains(ConnectivityResult.none);
   }
 
   Future<Map<String, List<SaleCollectorDTO>>> getSalesForCollector(
@@ -42,18 +52,55 @@ class CollectorService {
   }
 
   Future<CollectorDto> getCollectorByUserId(int userId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/collector/by-user/$userId'),
-      headers: headers,
-    );
+    final isar = DatabaseService.isar;
+    final online = await isOnline();
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-      return CollectorDto.fromJson(jsonData);
-    } else {
-      throw Exception('Erro ao buscar Collector pelo usuário');
+    if (online) {
+      try {
+        final headers = await _getHeaders();
+        final response = await http.get(
+          Uri.parse('$baseUrl/collector/by-user/$userId'),
+          headers: headers,
+        );
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonData = json.decode(response.body);
+          final collector = CollectorDto.fromJson(jsonData);
+
+          final collectorLocal = CollectorLocal()
+            ..serverId = collector.idCollector
+            ..userId = userId;
+
+          await isar.writeTxn(() async {
+            final existingCollector = await isar.collectorLocals
+                .filter()
+                .userIdEqualTo(userId)
+                .findFirst();
+
+            if (existingCollector != null) {
+              collectorLocal.id = existingCollector.id;
+            }
+
+            await isar.collectorLocals.put(collectorLocal);
+          });
+
+          return collector;
+        }
+      } catch (e) {
+        print("Erro ao buscar Cobrador online: $e");
+      }
     }
+
+    final collectorLocal = await isar.collectorLocals
+        .filter()
+        .userIdEqualTo(userId)
+        .findFirst();
+
+    if (collectorLocal == null) {
+      throw Exception("Cobrador não encontrado no banco locaal");
+    }
+
+    return CollectorDto(idCollector: collectorLocal.serverId ?? 0);
   }
 
   Future<void> paySale({

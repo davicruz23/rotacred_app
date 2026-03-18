@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rotacred_app/services/collector_service.dart';
 import 'package:rotacred_app/services/inspector_service.dart';
 import 'package:rotacred_app/ui/collector/collector_screen.dart';
 import 'package:rotacred_app/ui/fiscal/inspector_screen.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final SellerService _sellerService = SellerService();
   final InspectorService _inspectorService = InspectorService();
+  final CollectorService _collectorService = CollectorService();
 
   @override
   void initState() {
@@ -34,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
       } else if (widget.user.position == 'ROLE_FISCAL') {
         await _inspectorService.getPendingPreSales(widget.user.serverId);
         print("✔ Fiscal sincronizado com sucesso");
+      } else if (widget.user.position == 'ROLE_COBRADOR') {
+        await _collectorService.getCollectorByUserId(widget.user.serverId);
+        print("✔ Cobrador sincronizado com sucesso");
       }
     } catch (e) {
       print("Não foi possível sincronizar: $e");

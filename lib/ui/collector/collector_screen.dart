@@ -657,7 +657,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
     setState(() => _isLoading = true);
     try {
       final collector = await CollectorService().getCollectorByUserId(
-        widget.user.id,
+        widget.user.serverId,
       );
       final salesByCity = await CollectorService().getSalesForCollector(
         collector.idCollector,
