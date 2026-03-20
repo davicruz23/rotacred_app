@@ -127,9 +127,10 @@ class _SellerScreenState extends State<SellerScreen> {
         ],
       ),
       body: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+            colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
