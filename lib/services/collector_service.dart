@@ -172,4 +172,46 @@ class CollectorService {
       );
     }
   }
+
+  Future<void> reportProblem({
+    required int saleId,
+    required List<Map<String, dynamic>> items,
+    required int status,
+    String? description,
+  }) async {
+    final headers = await _getHeaders();
+
+    final formattedItems = items.map((item) {
+      return {
+        "productId": item["productId"],
+        "quantityReturned": item["quantityReturned"],
+      };
+    }).toList();
+
+    final body = {
+      "items": formattedItems,
+      "status": status,
+      "description": description ?? "",
+    };
+
+    final url = '$baseUrl/sale-return/sales/$saleId/returns';
+
+    print("========== JSON FINAL ==========");
+    print(JsonEncoder.withIndent('  ').convert(body));
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {...headers, "Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("STATUS: ${response.statusCode}");
+    print("RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception(
+        "Erro ao enviar problema: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
 }

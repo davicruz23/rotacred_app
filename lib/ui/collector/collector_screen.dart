@@ -21,6 +21,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
   Map<String, List<SaleCollectorDTO>> _salesByCity = {};
   bool _rotating = false;
   bool _refreshing = false;
+  final Map<int, TextEditingController> controllers = {};
 
   @override
   void initState() {
@@ -204,6 +205,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
                 ],
               ),
             )
+          //remover o reload aqui!
           : RefreshIndicator(
               onRefresh: _fetchCollectorSales,
               child: ListView(
@@ -371,8 +373,545 @@ class _CollectorScreenState extends State<CollectorScreen> {
           ),
         const SizedBox(height: 8),
         _buildLocationSection(sale),
+
+        const SizedBox(height: 12),
+
+        _buildReportProblemButton(sale),
       ],
     );
+  }
+
+  Widget _buildReportProblemButton(SaleCollectorDTO sale) {
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            colors: [Colors.red.shade400, Colors.red.shade600],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.warning_amber_rounded, size: 20),
+          label: const Text(
+            "Reportar Problema",
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: () => _showProblemDialog(sale),
+        ),
+      ),
+    );
+  }
+
+  void _showProblemDialog(SaleCollectorDTO sale) {
+    final descController = TextEditingController();
+    int? selectedStatus;
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🔥 Título + ícone
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        "Reportar Problema",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🔘 opções (cards clicáveis)
+                  _buildOptionCard(
+                    title: "Acionar garantia",
+                    subtitle: "Produto com defeito",
+                    icon: Icons.verified_user_outlined,
+                    selected: selectedStatus == 2,
+                    onTap: () => setState(() => selectedStatus = 2),
+                  ),
+
+                  _buildOptionCard(
+                    title: "Devolver produto",
+                    subtitle: "Devolução",
+                    icon: Icons.undo_outlined,
+                    selected: selectedStatus == 4,
+                    onTap: () => setState(() => selectedStatus = 4),
+                  ),
+
+                  _buildOptionCard(
+                    title: "Produto recuperado",
+                    subtitle: "Recuperado pelo Cobrador",
+                    icon: Icons.check_circle_outline,
+                    selected: selectedStatus == 5,
+                    onTap: () => setState(() => selectedStatus = 5),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // // ✍️ descrição
+                  // Container(
+                  //   decoration: BoxDecoration(
+                  //     color: const Color(0xFFF7F8FA),
+                  //     borderRadius: BorderRadius.circular(12),
+                  //   ),
+                  //   child: TextField(
+                  //     controller: descController,
+                  //     maxLines: 3,
+                  //     decoration: const InputDecoration(
+                  //       hintText: "Descreva o problema (opcional)",
+                  //       border: InputBorder.none,
+                  //       contentPadding: EdgeInsets.all(12),
+                  //     ),
+                  //   ),
+                  // ),
+
+                  const SizedBox(height: 20),
+
+                  // 🚀 botão
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (selectedStatus == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Selecione uma opção"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(context);
+
+                        _showReturnItemsDialog(
+                          sale,
+                          selectedStatus!,
+                          descController.text,
+                        );
+                      },
+                      child: const Text("Continuar"),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? Colors.blue.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? Colors.blueAccent : Colors.grey.shade200,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? Colors.blueAccent : Colors.grey),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProblemOption(
+    String title,
+    int status,
+    SaleCollectorDTO sale,
+    TextEditingController descController,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          Navigator.pop(context);
+          _showReturnItemsDialog(sale, status, descController.text);
+        },
+      ),
+    );
+  }
+
+  void _showReturnItemsDialog(
+    SaleCollectorDTO sale,
+    int status,
+    String description,
+  ) {
+    final List<Map<String, dynamic>> selectedItems = [
+      {"productId": null, "quantity": 1},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🔷 Título
+                  const Text(
+                    "Selecionar produtos",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🔹 Lista de itens
+                  ...selectedItems.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+
+                    final productId = item["productId"] as int?;
+                    final quantity = item["quantity"] as int;
+
+                    final product = sale.products.firstWhere(
+                      (p) => p.id == productId,
+                      orElse: () => sale.products.first,
+                    );
+
+                    final maxQty = productId == null ? 1 : product.quantity;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F8FA), // 🔥 fundo suave
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          // 🔽 Dropdown
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: DropdownButton<int>(
+                              value: productId,
+                              hint: const Text("Selecione o produto"),
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              items: sale.products.map((p) {
+                                return DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(
+                                    p.nameProduct,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedItems[index]["productId"] = value;
+                                  selectedItems[index]["quantity"] = 1;
+                                });
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // 🔢 Quantidade + remover
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // 🔢 Controle quantidade
+                              Row(
+                                children: [
+                                  _buildQtyButton(
+                                    icon: Icons.remove,
+                                    enabled: quantity > 1,
+                                    onTap: () {
+                                      setState(() {
+                                        selectedItems[index]["quantity"] =
+                                            quantity - 1;
+                                      });
+                                    },
+                                  ),
+
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      quantity.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+
+                                  _buildQtyButton(
+                                    icon: Icons.add,
+                                    enabled:
+                                        productId != null && quantity < maxQty,
+                                    onTap: () {
+                                      setState(() {
+                                        selectedItems[index]["quantity"] =
+                                            quantity + 1;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              // ❌ remover item
+                              if (selectedItems.length > 1)
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedItems.removeAt(index);
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+                  const SizedBox(height: 10),
+
+                  // ➕ adicionar item
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blueAccent,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          selectedItems.add({"productId": null, "quantity": 1});
+                        });
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text("Adicionar item"),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🚀 botão enviar
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: () {
+                        final validItems = selectedItems
+                            .where((e) => e["productId"] != null)
+                            .toList();
+
+                        if (validItems.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Selecione pelo menos um produto"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final hasInvalidQty = validItems.any(
+                          (e) => (e["quantity"] as int) <= 0,
+                        );
+
+                        if (hasInvalidQty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Quantidade inválida"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final items = validItems
+                            .map(
+                              (e) => {
+                                "productId": e["productId"],
+                                "quantityReturned": e["quantity"],
+                              },
+                            )
+                            .toList();
+
+                        Navigator.pop(context);
+
+                        _sendProblem(sale, status, description, items);
+                      },
+                      child: const Text(
+                        "Enviar",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQtyButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: enabled ? Colors.blue.shade50 : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? Colors.blueAccent : Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendProblem(
+    SaleCollectorDTO sale,
+    int status,
+    String description,
+    List<Map<String, dynamic>> items,
+  ) async {
+    try {
+      await CollectorService().reportProblem(
+        saleId: sale.id,
+        items: items,
+        status: status,
+        description: description.isEmpty ? null : description,
+      );
+
+      await _fetchCollectorSales();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Enviado com sucesso ✅")));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Erro: $e")));
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
@@ -1015,55 +1554,4 @@ class _CollectorScreenState extends State<CollectorScreen> {
       );
     }
   }
-
-  // Future<void> _logout() async {
-  //   final shouldLogout = await showDialog<bool>(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (context) => AlertDialog(
-  //       backgroundColor: Colors.white,
-  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-  //       title: Row(
-  //         children: const [
-  //           Icon(Icons.logout_rounded, color: Colors.redAccent),
-  //           SizedBox(width: 8),
-  //           Text(
-  //             'Sair da conta',
-  //             style: TextStyle(
-  //               color: Colors.black87,
-  //               fontWeight: FontWeight.w600,
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       content: const Text(
-  //         'Deseja realmente sair da conta?',
-  //         style: TextStyle(color: Colors.black54, fontSize: 15),
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context, false),
-  //           child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-  //         ),
-  //         ElevatedButton(
-  //           style: ElevatedButton.styleFrom(
-  //             backgroundColor: Colors.redAccent,
-  //             shape: RoundedRectangleBorder(
-  //               borderRadius: BorderRadius.all(Radius.circular(10)),
-  //             ),
-  //           ),
-  //           onPressed: () => Navigator.pop(context, true),
-  //           child: const Text('Sair'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-
-  //   if (shouldLogout == true && mounted) {
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
-  //     );
-  //   }
-  // }
 }

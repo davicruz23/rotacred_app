@@ -102,11 +102,12 @@ class AddressDTO {
 class ProductSaleDTO {
   final int id;
   final String nameProduct;
+  final int quantity;
 
-  ProductSaleDTO({required this.id, required this.nameProduct});
+  ProductSaleDTO({required this.id, required this.nameProduct, required this.quantity});
 
   factory ProductSaleDTO.fromJson(Map<String, dynamic> json) {
-    return ProductSaleDTO(id: json['id'], nameProduct: json['nameProduct']);
+    return ProductSaleDTO(id: json['id'], nameProduct: json['nameProduct'], quantity: json['quantity']);
   }
 }
 

@@ -264,6 +264,24 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                       Icons.badge,
                     ).copyWith(errorText: _cpfErro),
 
+                    // ✅ VALIDAÇÃO REAL (bloqueia submit)
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Informe o CPF';
+                      }
+
+                      if (v.length < 11) {
+                        return 'CPF deve ter 11 dígitos';
+                      }
+
+                      if (_cpfErro != null) {
+                        return _cpfErro; // já vem como "CPF inválido"
+                      }
+
+                      return null;
+                    },
+
+                    // 🔍 VALIDAÇÃO ASSÍNCRONA (UX)
                     onChanged: (v) async {
                       final cpf = v;
 
@@ -273,6 +291,7 @@ class _CreatePreSaleScreenState extends State<CreatePreSaleScreen> {
                         }
                         return;
                       }
+
                       if (cpf.length == 11 && !_validandoCpf) {
                         _validandoCpf = true;
 

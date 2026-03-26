@@ -43,42 +43,80 @@ class _SellerScreenState extends State<SellerScreen> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.logout_rounded, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text(
-              'Sair da conta',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 20),
+
+              // 🧠 Título
+              const Text(
+                'Sair da conta',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Deseja realmente sair da conta?',
-          style: TextStyle(color: Colors.black54, fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(10)),
+
+              const SizedBox(height: 10),
+
+              // 📄 Texto
+              const Text(
+                'Tem certeza que deseja sair?\nVocê precisará fazer login novamente.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
               ),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sair'),
+
+              const SizedBox(height: 24),
+
+              // 🔘 Botões
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Sair'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
 
@@ -97,30 +135,50 @@ class _SellerScreenState extends State<SellerScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: Text(
-          'Vendedor - ${widget.user.name}',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          overflow: TextOverflow.ellipsis,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const SizedBox(width: 8),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white,
+              child: Text(
+                widget.user.name.isNotEmpty
+                    ? widget.user.name[0].toUpperCase()
+                    : 'U',
+                style: const TextStyle(
+                  color: Color(0xFF1976D2),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                widget.user.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         actions: [
-          GestureDetector(
-            onTapDown: (_) => setState(() => _rotating = true),
-            onTapUp: (_) {
-              Future.delayed(const Duration(milliseconds: 150), () {
-                setState(() => _rotating = false);
-                _logout();
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: AnimatedRotation(
-                turns: _rotating ? 0.25 : 0.0,
-                duration: const Duration(milliseconds: 200),
-                child: const Icon(Icons.logout_rounded, color: Colors.white),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(30),
+              onTap: _logout,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.logout, color: Colors.white),
               ),
             ),
           ),
@@ -130,7 +188,7 @@ class _SellerScreenState extends State<SellerScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+            colors: [Color(0xFF1565C0), Color(0xFF1E88E5), Color(0xFF42A5F5)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -138,7 +196,10 @@ class _SellerScreenState extends State<SellerScreen> {
         child: SafeArea(
           child: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.white,
+                  ),
                 )
               : _currentCharging != null
               ? ChargingProductsScreen(
@@ -155,37 +216,56 @@ class _SellerScreenState extends State<SellerScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Card(
-          color: Colors.white,
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 64,
-                  color: Colors.blue.shade700,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Nenhum carregamento ativo encontrado.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Crie um novo carregamento no sistema para começar.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, fontSize: 14),
-                ),
-              ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                size: 60,
+                color: Colors.white,
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
+            const Text(
+              'Nenhum carregamento ativo',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Crie um novo carregamento para começar suas vendas.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 3,
+              ),
+              onPressed: _loadCurrentCharging,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Atualizar'),
+            ),
+          ],
         ),
       ),
     );
