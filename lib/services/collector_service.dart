@@ -4,10 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:isar/isar.dart';
 import 'package:rotacred_app/database/database_service.dart';
 import 'package:rotacred_app/database/entities/collector_local.dart';
-import 'package:rotacred_app/database/entities/inspector_local.dart';
 import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/dto/collector_dto.dart';
 import '../model/dto/sale_collector_dto.dart';
+import '../database/entities/sales_collector_local.dart';
 import 'dart:typed_data';
 import 'auth_service.dart'; // importa AuthService para pegar o token
 
@@ -31,24 +31,89 @@ class CollectorService {
   Future<Map<String, List<SaleCollectorDTO>>> getSalesForCollector(
     int collectorId,
   ) async {
-    final headers = await _getHeaders();
-    final url = Uri.parse('$baseUrl/collector/$collectorId/sales');
-    final response = await http.get(url, headers: headers);
+    final isar = DatabaseService.isar;
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body);
+    final online = await isOnline();
 
-      return data.map((city, salesJson) {
-        final salesList = (salesJson as List)
-            .map((json) => SaleCollectorDTO.fromJson(json))
-            .toList();
-        return MapEntry(city, salesList);
-      });
-    } else {
-      throw Exception(
-        'Erro ao buscar vendas para cobrador ${response.statusCode}',
-      );
+    // 🔥 1. ONLINE → BUSCA DO SERVIDOR E SALVA
+    if (online) {
+      final headers = await _getHeaders();
+      final url = Uri.parse('$baseUrl/collector/$collectorId/sales');
+      final response = await http.get(url, headers: headers);
+
+      print('STATUS: ${response.statusCode}');
+      print('BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        print('JSON DECODED: $data');
+
+        // 🔥 DTO (retorno do método)
+        final result = data.map((city, salesJson) {
+          final salesList = (salesJson as List)
+              .map((json) => SaleCollectorDTO.fromJson(json))
+              .toList();
+          return MapEntry(city, salesList);
+        });
+
+        // 🔥 CONVERTE PRA LOCAL
+        final localList = data.entries.expand((entry) {
+          final city = entry.key;
+          final list = entry.value as List;
+
+          return list.map((json) => SaleCollectorLocal.fromJson(city, json));
+        }).toList();
+
+        // 🔥 SALVA NO ISAR
+        await isar.writeTxn(() async {
+          final existing = await isar.saleCollectorLocals.where().findAll();
+
+          final serverIds = localList.map((e) => e.saleId).toSet();
+
+          // 🔥 REMOVE O QUE NÃO EXISTE MAIS
+          for (final item in existing) {
+            if (!serverIds.contains(item.saleId)) {
+              await isar.saleCollectorLocals.delete(item.id);
+            }
+          }
+
+          // 🔥 INSERE / ATUALIZA
+          for (final sale in localList) {
+            final existingItem = await isar.saleCollectorLocals
+                .filter()
+                .saleIdEqualTo(sale.saleId)
+                .findFirst();
+
+            if (existingItem != null) {
+              sale.id = existingItem.id;
+            }
+
+            await isar.saleCollectorLocals.put(sale);
+          }
+        });
+
+        return result;
+      }
     }
+
+    // 🔥 2. OFFLINE → BUSCA DO BANCO
+    final localList = await isar.saleCollectorLocals.where().findAll();
+
+    // 🔥 RECONSTRÓI O MAP POR CIDADE
+    final Map<String, List<SaleCollectorDTO>> result = {};
+
+    for (final sale in localList) {
+      final dto = SaleCollectorDTO.fromLocal(sale);
+
+      if (!result.containsKey(sale.city)) {
+        result[sale.city] = [];
+      }
+
+      result[sale.city]!.add(dto);
+    }
+
+    return result;
   }
 
   Future<CollectorDto> getCollectorByUserId(int userId) async {

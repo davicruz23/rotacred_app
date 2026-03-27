@@ -8,6 +8,7 @@ import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
 import 'package:rotacred_app/database/entities/inspector_reject_local.dart';
 import 'package:rotacred_app/database/entities/pre_sale_item_local.dart';
 import 'package:rotacred_app/database/entities/pre_sale_local.dart';
+import 'package:rotacred_app/database/entities/sales_collector_local.dart';
 import 'package:rotacred_app/database/entities/seller_local.dart';
 import '../model/charging.dart';
 import '../model/charging_item.dart';
@@ -36,6 +37,7 @@ class DatabaseService {
           InspectorApproveLocalSchema,
           InspectorRejectLocalSchema,
           CollectorLocalSchema,
+          SaleCollectorLocalSchema,
         ],
         directory: dir.path,
         inspector: true,

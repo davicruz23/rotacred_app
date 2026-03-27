@@ -348,8 +348,7 @@ class InspectorService {
     }
 
     // 🔥 OFFLINE → salva fila + muda status
-    final reject = InspectorRejectLocal()
-      ..preSaleId = preSaleId;
+    final reject = InspectorRejectLocal()..preSaleId = preSaleId;
 
     await isar.writeTxn(() async {
       await isar.inspectorRejectLocals.put(reject);

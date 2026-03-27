@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:rotacred_app/database/entities/sales_collector_local.dart';
 
 class SaleCollectorDTO {
   final int id;
@@ -43,6 +44,67 @@ class SaleCollectorDTO {
       paidAmount: json[''],
       latitude: json['latitude'],
       longitude: json['longitude'],
+    );
+  }
+
+  // 🔥 ADICIONADO: conversão do Isar → DTO
+  factory SaleCollectorDTO.fromLocal(SaleCollectorLocal local) {
+    DateTime parsedSaleDate;
+
+    try {
+      parsedSaleDate = DateTime.parse(local.saleDate);
+    } catch (_) {
+      parsedSaleDate = DateFormat('dd/MM/yyyy').parse(local.saleDate);
+    }
+
+    return SaleCollectorDTO(
+      id: local.saleId,
+      saleDate: parsedSaleDate,
+
+      client: ClientDTO(
+        name: local.client.name,
+        cpf: local.client.cpf,
+        phone: local.client.phone,
+        address: AddressDTO(
+          id: local.client.address.id,
+          city: local.client.address.city,
+          street: local.client.address.street,
+          number: local.client.address.number,
+          zipCode: local.client.address.zipCode,
+          complement: local.client.address.complement ?? '',
+        ),
+      ),
+
+      products: local.products
+          .map(
+            (p) => ProductSaleDTO(
+              id: p.id,
+              nameProduct: p.nameProduct,
+              quantity: p.quantity,
+            ),
+          )
+          .toList(),
+
+      installments: local.installments
+          .map(
+            (i) => InstallmentDTO(
+              id: i.id,
+              dueDate: (() {
+                try {
+                  return DateTime.parse(i.dueDate);
+                } catch (_) {
+                  return DateFormat('dd/MM/yyyy').parse(i.dueDate);
+                }
+              })(),
+              amount: i.amount,
+              paid: i.paid,
+            ),
+          )
+          .toList(),
+
+      paidAmount: null, // não existe no local ainda
+      latitude: local.latitude,
+      longitude: local.longitude,
     );
   }
 }
@@ -104,10 +166,18 @@ class ProductSaleDTO {
   final String nameProduct;
   final int quantity;
 
-  ProductSaleDTO({required this.id, required this.nameProduct, required this.quantity});
+  ProductSaleDTO({
+    required this.id,
+    required this.nameProduct,
+    required this.quantity,
+  });
 
   factory ProductSaleDTO.fromJson(Map<String, dynamic> json) {
-    return ProductSaleDTO(id: json['id'], nameProduct: json['nameProduct'], quantity: json['quantity']);
+    return ProductSaleDTO(
+      id: json['id'],
+      nameProduct: json['nameProduct'],
+      quantity: json['quantity'],
+    );
   }
 }
 
