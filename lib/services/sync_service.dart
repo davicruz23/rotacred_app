@@ -278,11 +278,26 @@ class SyncService {
       try {
         final headers = await _getHeaders();
 
+        print("======================================");
         print("➡ Processando ID: ${action.id}");
+        print("➡ collectorId: ${action.collectorId}");
+        print("➡ installmentId: ${action.installmentId}");
+        print("➡ amount: ${action.amount}");
+        print("➡ paymentMethod: ${action.paymentMethod}");
+        print("➡ requiresPaySale: ${action.requiresPaySale}");
+        print("➡ paySent: ${action.paySent}");
+        print("======================================");
 
         // 🔥 1. PAY
         if (action.requiresPaySale && !action.paySent) {
           print("🟡 Enviando PAY");
+
+          if (action.amount == null) {
+            print("❌ ERRO: amount NULL no PAY → ID: ${action.id}");
+            continue;
+          }
+
+          print("➡ PAY amount: ${action.amount}");
 
           final payUrl = Uri.parse(
             '$baseUrl/collector/${action.installmentId}/pay?amount=${action.amount!.toStringAsFixed(2)}',
@@ -294,7 +309,7 @@ class SyncService {
 
           if (payResponse.statusCode != 200) {
             print("❌ Erro no PAY");
-            break;
+            continue;
           }
 
           await isar.writeTxn(() async {
@@ -310,6 +325,15 @@ class SyncService {
           '$baseUrl/collector/${action.collectorId}/installment/${action.installmentId}/collect',
         );
 
+        print("🟡 MONTANDO PAYLOAD");
+
+        print("➡ amount: ${action.amount}");
+        print("➡ paymentMethod: ${action.paymentMethod}");
+        print("➡ latitude: ${action.latitude}");
+        print("➡ longitude: ${action.longitude}");
+        print("➡ note: ${action.note}");
+        print("➡ newDueDate: ${action.newDueDate}");
+
         final payload = {
           if (action.amount != null) 'amount': action.amount,
           if (action.paymentMethod != null)
@@ -321,9 +345,11 @@ class SyncService {
             'newDueDate': action.newDueDate!.toIso8601String(),
         };
 
+        print("🔥 PAYLOAD FINAL: ${jsonEncode(payload)}");
+
         final collectResponse = await http.put(
           collectUrl,
-          headers: headers,
+          headers: {...headers, "Content-Type": "application/json"},
           body: jsonEncode(payload),
         );
 

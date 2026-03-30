@@ -253,7 +253,7 @@ class CollectorService {
 
         final response = await http.put(
           url,
-          headers: headers,
+          headers: {...headers, "Content-Type": "application/json"},
           body: jsonEncode(payload),
         );
 
