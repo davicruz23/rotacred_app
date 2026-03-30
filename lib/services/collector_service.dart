@@ -162,45 +162,6 @@ class CollectorService {
     return CollectorDto(idCollector: collectorLocal.serverId ?? 0);
   }
 
-  Future<void> paySale({
-    required int installmentId,
-    required double amount,
-  }) async {
-    final online = await isOnline();
-
-    print("🟡 [paySale] INICIO");
-    print("➡ installmentId: $installmentId");
-    print("➡ amount: $amount");
-
-    if (online) {
-      try {
-        final headers = await _getHeaders();
-
-        final url = Uri.parse(
-          '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
-        );
-
-        print("🌐 ONLINE");
-        print("➡ URL: $url");
-
-        final response = await http.put(url, headers: headers);
-
-        print("⬅ STATUS: ${response.statusCode}");
-        print("⬅ BODY: ${response.body}");
-
-        if (response.statusCode == 200) {
-          print("✅ SUCESSO ONLINE (paySale)");
-          return;
-        }
-      } catch (e) {
-        print("❌ Erro no paySale online: $e");
-      }
-    }
-
-    // 🔴 OFFLINE → NÃO salva isolado mais
-    print("⚠️ paySale offline será tratado junto com collectInstallment");
-  }
-
   Future<void> collectInstallment({
     required int collectorId,
     required int installmentId,
@@ -210,38 +171,21 @@ class CollectorService {
     double? longitude,
     String? note,
     DateTime? newDueDate,
-    bool requiresPaySale = false,
   }) async {
     final isar = DatabaseService.isar;
     final online = await isOnline();
 
-    print("🟡 [collectInstallment] INICIO");
-    print("➡ collectorId: $collectorId");
-    print("➡ installmentId: $installmentId");
-    print("➡ amount: $amount");
+    print(
+      "🟡 [collectInstallment] INICIO - collectorId: $collectorId, installmentId: $installmentId, amount: $amount",
+    );
+
+    final headers = await _getHeaders();
 
     if (online) {
       try {
-        final headers = await _getHeaders();
-
-        // 🔥 PAY PRIMEIRO
-        if (requiresPaySale && amount != null) {
-          final payUrl = Uri.parse(
-            '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
-          );
-
-          final payResponse = await http.put(payUrl, headers: headers);
-
-          if (payResponse.statusCode != 200) {
-            throw Exception("Erro no paySale online");
-          }
-        }
-
-        // 🔥 DEPOIS COLLECT
         final url = Uri.parse(
           '$baseUrl/collector/$collectorId/installment/$installmentId/collect',
         );
-
         final payload = {
           if (amount != null) 'amount': amount,
           if (paymentMethod != null) 'paymentMethod': paymentMethod,
@@ -258,8 +202,10 @@ class CollectorService {
         );
 
         if (response.statusCode == 200) {
-          print("✅ SUCESSO ONLINE");
+          print("✅ SUCESSO ONLINE collectInstallment");
           return;
+        } else {
+          throw Exception("Erro no collect online: ${response.statusCode}");
         }
       } catch (e) {
         print("❌ Erro online: $e");
@@ -267,7 +213,7 @@ class CollectorService {
     }
 
     // 🔴 OFFLINE → SALVA COMPLETO
-    print("🔴 SALVANDO NO ISAR");
+    print("⚠️ SALVANDO NO ISAR OFFLINE");
 
     await isar.writeTxn(() async {
       final entity = PendingPayment()
@@ -279,9 +225,7 @@ class CollectorService {
         ..longitude = longitude
         ..note = note
         ..newDueDate = newDueDate
-        ..requiresPaySale = requiresPaySale
-        ..paySent =
-            false // 🔥 AQUI É O CERTO
+        ..paySent = false
         ..createdAt = DateTime.now();
 
       await isar.pendingPayments.put(entity);

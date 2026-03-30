@@ -1428,13 +1428,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
           return;
         }
 
-        print("🟡 Chamando paySale...");
-        await CollectorService().paySale(
-          installmentId: installmentId,
-          amount: cashAmount,
-        );
-        print("✅ paySale OK");
-
+        // ❌ REMOVE paySale
         print("🟡 Chamando collectInstallment (CASH)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
@@ -1444,7 +1438,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
           latitude: pos.latitude,
           longitude: pos.longitude,
           note: "Pago em dinheiro",
-          requiresPaySale: true,
         );
         print("✅ collectInstallment CASH OK");
       } else {

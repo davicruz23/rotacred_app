@@ -12,8 +12,7 @@ class PendingPayment {
   double? amount;
   String? paymentMethod;
 
-  bool requiresPaySale = false; // 🔥 controla se precisa do PAY
-  bool paySent = false; // 🔥 controla se o PAY já foi feito
+  bool paySent = false;
 
   double? latitude;
   double? longitude;

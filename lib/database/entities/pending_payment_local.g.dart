@@ -66,11 +66,6 @@ const PendingPaymentSchema = CollectionSchema(
       id: 9,
       name: r'paymentMethod',
       type: IsarType.string,
-    ),
-    r'requiresPaySale': PropertySchema(
-      id: 10,
-      name: r'requiresPaySale',
-      type: IsarType.bool,
     )
   },
   estimateSize: _pendingPaymentEstimateSize,
@@ -124,7 +119,6 @@ void _pendingPaymentSerialize(
   writer.writeString(offsets[7], object.note);
   writer.writeBool(offsets[8], object.paySent);
   writer.writeString(offsets[9], object.paymentMethod);
-  writer.writeBool(offsets[10], object.requiresPaySale);
 }
 
 PendingPayment _pendingPaymentDeserialize(
@@ -145,7 +139,6 @@ PendingPayment _pendingPaymentDeserialize(
   object.note = reader.readStringOrNull(offsets[7]);
   object.paySent = reader.readBool(offsets[8]);
   object.paymentMethod = reader.readStringOrNull(offsets[9]);
-  object.requiresPaySale = reader.readBool(offsets[10]);
   return object;
 }
 
@@ -176,8 +169,6 @@ P _pendingPaymentDeserializeProp<P>(
       return (reader.readBool(offset)) as P;
     case 9:
       return (reader.readStringOrNull(offset)) as P;
-    case 10:
-      return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1145,16 +1136,6 @@ extension PendingPaymentQueryFilter
       ));
     });
   }
-
-  QueryBuilder<PendingPayment, PendingPayment, QAfterFilterCondition>
-      requiresPaySaleEqualTo(bool value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'requiresPaySale',
-        value: value,
-      ));
-    });
-  }
 }
 
 extension PendingPaymentQueryObject
@@ -1295,20 +1276,6 @@ extension PendingPaymentQuerySortBy
       sortByPaymentMethodDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'paymentMethod', Sort.desc);
-    });
-  }
-
-  QueryBuilder<PendingPayment, PendingPayment, QAfterSortBy>
-      sortByRequiresPaySale() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'requiresPaySale', Sort.asc);
-    });
-  }
-
-  QueryBuilder<PendingPayment, PendingPayment, QAfterSortBy>
-      sortByRequiresPaySaleDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'requiresPaySale', Sort.desc);
     });
   }
 }
@@ -1459,20 +1426,6 @@ extension PendingPaymentQuerySortThenBy
       return query.addSortBy(r'paymentMethod', Sort.desc);
     });
   }
-
-  QueryBuilder<PendingPayment, PendingPayment, QAfterSortBy>
-      thenByRequiresPaySale() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'requiresPaySale', Sort.asc);
-    });
-  }
-
-  QueryBuilder<PendingPayment, PendingPayment, QAfterSortBy>
-      thenByRequiresPaySaleDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'requiresPaySale', Sort.desc);
-    });
-  }
 }
 
 extension PendingPaymentQueryWhereDistinct
@@ -1544,13 +1497,6 @@ extension PendingPaymentQueryWhereDistinct
           caseSensitive: caseSensitive);
     });
   }
-
-  QueryBuilder<PendingPayment, PendingPayment, QDistinct>
-      distinctByRequiresPaySale() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'requiresPaySale');
-    });
-  }
 }
 
 extension PendingPaymentQueryProperty
@@ -1620,13 +1566,6 @@ extension PendingPaymentQueryProperty
       paymentMethodProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'paymentMethod');
-    });
-  }
-
-  QueryBuilder<PendingPayment, bool, QQueryOperations>
-      requiresPaySaleProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'requiresPaySale');
     });
   }
 }

@@ -284,55 +284,13 @@ class SyncService {
         print("➡ installmentId: ${action.installmentId}");
         print("➡ amount: ${action.amount}");
         print("➡ paymentMethod: ${action.paymentMethod}");
-        print("➡ requiresPaySale: ${action.requiresPaySale}");
         print("➡ paySent: ${action.paySent}");
         print("======================================");
 
-        // 🔥 1. PAY
-        if (action.requiresPaySale && !action.paySent) {
-          print("🟡 Enviando PAY");
-
-          if (action.amount == null) {
-            print("❌ ERRO: amount NULL no PAY → ID: ${action.id}");
-            continue;
-          }
-
-          print("➡ PAY amount: ${action.amount}");
-
-          final payUrl = Uri.parse(
-            '$baseUrl/collector/${action.installmentId}/pay?amount=${action.amount!.toStringAsFixed(2)}',
-          );
-
-          final payResponse = await http.put(payUrl, headers: headers);
-
-          print("⬅ PAY STATUS: ${payResponse.statusCode}");
-
-          if (payResponse.statusCode != 200) {
-            print("❌ Erro no PAY");
-            continue;
-          }
-
-          await isar.writeTxn(() async {
-            action.paySent = true;
-            await isar.pendingPayments.put(action);
-          });
-        }
-
-        // 🔥 2. COLLECT
-        print("🟡 Enviando COLLECT");
-
+        // 🔥 ENVIAR COLLECT
         final collectUrl = Uri.parse(
           '$baseUrl/collector/${action.collectorId}/installment/${action.installmentId}/collect',
         );
-
-        print("🟡 MONTANDO PAYLOAD");
-
-        print("➡ amount: ${action.amount}");
-        print("➡ paymentMethod: ${action.paymentMethod}");
-        print("➡ latitude: ${action.latitude}");
-        print("➡ longitude: ${action.longitude}");
-        print("➡ note: ${action.note}");
-        print("➡ newDueDate: ${action.newDueDate}");
 
         final payload = {
           if (action.amount != null) 'amount': action.amount,
@@ -360,7 +318,7 @@ class SyncService {
           break;
         }
 
-        // ✅ REMOVE
+        // ✅ REMOVER DO ISAR
         await isar.writeTxn(() async {
           await isar.pendingPayments.delete(action.id);
         });
