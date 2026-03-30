@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:isar/isar.dart';
 import 'package:rotacred_app/database/database_service.dart';
 import 'package:rotacred_app/database/entities/collector_local.dart';
+import 'package:rotacred_app/database/entities/pending_payment_local.dart';
+import 'package:rotacred_app/database/entities/sale_return_local.dart';
 import 'package:rotacred_app/env/environment.dart';
 import 'package:rotacred_app/model/dto/collector_dto.dart';
 import '../model/dto/sale_collector_dto.dart';
@@ -35,7 +37,6 @@ class CollectorService {
 
     final online = await isOnline();
 
-    // 🔥 1. ONLINE → BUSCA DO SERVIDOR E SALVA
     if (online) {
       final headers = await _getHeaders();
       final url = Uri.parse('$baseUrl/collector/$collectorId/sales');
@@ -49,7 +50,6 @@ class CollectorService {
 
         print('JSON DECODED: $data');
 
-        // 🔥 DTO (retorno do método)
         final result = data.map((city, salesJson) {
           final salesList = (salesJson as List)
               .map((json) => SaleCollectorDTO.fromJson(json))
@@ -57,7 +57,6 @@ class CollectorService {
           return MapEntry(city, salesList);
         });
 
-        // 🔥 CONVERTE PRA LOCAL
         final localList = data.entries.expand((entry) {
           final city = entry.key;
           final list = entry.value as List;
@@ -65,20 +64,17 @@ class CollectorService {
           return list.map((json) => SaleCollectorLocal.fromJson(city, json));
         }).toList();
 
-        // 🔥 SALVA NO ISAR
         await isar.writeTxn(() async {
           final existing = await isar.saleCollectorLocals.where().findAll();
 
           final serverIds = localList.map((e) => e.saleId).toSet();
 
-          // 🔥 REMOVE O QUE NÃO EXISTE MAIS
           for (final item in existing) {
             if (!serverIds.contains(item.saleId)) {
               await isar.saleCollectorLocals.delete(item.id);
             }
           }
 
-          // 🔥 INSERE / ATUALIZA
           for (final sale in localList) {
             final existingItem = await isar.saleCollectorLocals
                 .filter()
@@ -97,10 +93,8 @@ class CollectorService {
       }
     }
 
-    // 🔥 2. OFFLINE → BUSCA DO BANCO
     final localList = await isar.saleCollectorLocals.where().findAll();
 
-    // 🔥 RECONSTRÓI O MAP POR CIDADE
     final Map<String, List<SaleCollectorDTO>> result = {};
 
     for (final sale in localList) {
@@ -172,19 +166,39 @@ class CollectorService {
     required int installmentId,
     required double amount,
   }) async {
-    final headers = await _getHeaders();
+    final online = await isOnline();
 
-    final url = Uri.parse(
-      '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
-    );
+    print("🟡 [paySale] INICIO");
+    print("➡ installmentId: $installmentId");
+    print("➡ amount: $amount");
 
-    final response = await http.put(url, headers: headers);
+    if (online) {
+      try {
+        final headers = await _getHeaders();
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Erro ao marcar pagamento da parcela ($installmentId): ${response.statusCode}',
-      );
+        final url = Uri.parse(
+          '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
+        );
+
+        print("🌐 ONLINE");
+        print("➡ URL: $url");
+
+        final response = await http.put(url, headers: headers);
+
+        print("⬅ STATUS: ${response.statusCode}");
+        print("⬅ BODY: ${response.body}");
+
+        if (response.statusCode == 200) {
+          print("✅ SUCESSO ONLINE (paySale)");
+          return;
+        }
+      } catch (e) {
+        print("❌ Erro no paySale online: $e");
+      }
     }
+
+    // 🔴 OFFLINE → NÃO salva isolado mais
+    print("⚠️ paySale offline será tratado junto com collectInstallment");
   }
 
   Future<void> collectInstallment({
@@ -196,32 +210,82 @@ class CollectorService {
     double? longitude,
     String? note,
     DateTime? newDueDate,
+    bool requiresPaySale = false,
   }) async {
-    final headers = await _getHeaders();
-    final url = Uri.parse(
-      '$baseUrl/collector/$collectorId/installment/$installmentId/collect',
-    );
+    final isar = DatabaseService.isar;
+    final online = await isOnline();
 
-    final payload = {
-      if (amount != null) 'amount': amount,
-      if (paymentMethod != null) 'paymentMethod': paymentMethod,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
-      if (note != null) 'note': note,
-      if (newDueDate != null) 'newDueDate': newDueDate.toIso8601String(),
-    };
+    print("🟡 [collectInstallment] INICIO");
+    print("➡ collectorId: $collectorId");
+    print("➡ installmentId: $installmentId");
+    print("➡ amount: $amount");
 
-    final response = await http.put(
-      url,
-      headers: headers,
-      body: jsonEncode(payload),
-    );
+    if (online) {
+      try {
+        final headers = await _getHeaders();
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Erro ao registrar tentativa de cobrança: ${response.statusCode} - ${response.body}',
-      );
+        // 🔥 PAY PRIMEIRO
+        if (requiresPaySale && amount != null) {
+          final payUrl = Uri.parse(
+            '$baseUrl/collector/$installmentId/pay?amount=${amount.toStringAsFixed(2)}',
+          );
+
+          final payResponse = await http.put(payUrl, headers: headers);
+
+          if (payResponse.statusCode != 200) {
+            throw Exception("Erro no paySale online");
+          }
+        }
+
+        // 🔥 DEPOIS COLLECT
+        final url = Uri.parse(
+          '$baseUrl/collector/$collectorId/installment/$installmentId/collect',
+        );
+
+        final payload = {
+          if (amount != null) 'amount': amount,
+          if (paymentMethod != null) 'paymentMethod': paymentMethod,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+          if (note != null) 'note': note,
+          if (newDueDate != null) 'newDueDate': newDueDate.toIso8601String(),
+        };
+
+        final response = await http.put(
+          url,
+          headers: headers,
+          body: jsonEncode(payload),
+        );
+
+        if (response.statusCode == 200) {
+          print("✅ SUCESSO ONLINE");
+          return;
+        }
+      } catch (e) {
+        print("❌ Erro online: $e");
+      }
     }
+
+    // 🔴 OFFLINE → SALVA COMPLETO
+    print("🔴 SALVANDO NO ISAR");
+
+    await isar.writeTxn(() async {
+      final entity = PendingPayment()
+        ..collectorId = collectorId
+        ..installmentId = installmentId
+        ..amount = amount
+        ..paymentMethod = paymentMethod
+        ..latitude = latitude
+        ..longitude = longitude
+        ..note = note
+        ..newDueDate = newDueDate
+        ..requiresPaySale = requiresPaySale
+        ..paySent =
+            false // 🔥 AQUI É O CERTO
+        ..createdAt = DateTime.now();
+
+      await isar.pendingPayments.put(entity);
+    });
   }
 
   Future<Uint8List> getPixQrCode(int installmentId) async {
@@ -244,6 +308,9 @@ class CollectorService {
     required int status,
     String? description,
   }) async {
+    final isar = DatabaseService.isar;
+    final online = await isOnline();
+
     final headers = await _getHeaders();
 
     final formattedItems = items.map((item) {
@@ -264,19 +331,37 @@ class CollectorService {
     print("========== JSON FINAL ==========");
     print(JsonEncoder.withIndent('  ').convert(body));
 
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {...headers, "Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
+    if (online) {
+      try {
+        final response = await http.post(
+          Uri.parse(url),
+          headers: {...headers, "Content-Type": "application/json"},
+          body: jsonEncode(body),
+        );
 
-    print("STATUS: ${response.statusCode}");
-    print("RESPONSE: ${response.body}");
+        print("STATUS: ${response.statusCode}");
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(
-        "Erro ao enviar problema: ${response.statusCode} - ${response.body}",
-      );
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          print("✅ SUCESSO ONLINE");
+          return;
+        }
+      } catch (e) {
+        print("❌ erro online: $e");
+      }
     }
+
+    // 🔴 OFFLINE
+    print("🔴 SALVANDO RETORNO NO ISAR");
+
+    await isar.writeTxn(() async {
+      final entity = SaleReturnLocal()
+        ..saleId = saleId
+        ..itemsJson = formattedItems.map((e) => jsonEncode(e)).toList()
+        ..status = status
+        ..description = description
+        ..createdAt = DateTime.now();
+
+      await isar.saleReturnLocals.put(entity);
+    });
   }
 }

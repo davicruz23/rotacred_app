@@ -392,7 +392,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.withOpacity(0.25),
+              color: const Color.fromARGB(255, 87, 85, 84).withOpacity(0.25),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -504,7 +504,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
                   //     ),
                   //   ),
                   // ),
-
                   const SizedBox(height: 20),
 
                   // 🚀 botão
@@ -1031,7 +1030,9 @@ class _CollectorScreenState extends State<CollectorScreen> {
                     ),
                   ),
                   Text(
-                    "Valor Recebido: R\$ ${inst.amount.toStringAsFixed(2)}",
+                    inst.paid
+                        ? "Pagamento recebido: R\$ ${inst.amount.toStringAsFixed(2)}"
+                        : "Valor da parcela: R\$ ${inst.amount.toStringAsFixed(2)}",
                     style: TextStyle(
                       color: inst.paid ? Colors.green : Colors.grey.shade600,
                     ),
@@ -1246,9 +1247,17 @@ class _CollectorScreenState extends State<CollectorScreen> {
 
   Future<void> _markAsPaid(int installmentId, double amount) async {
     try {
-      final pos = await _getCurrentLocation();
+      print("🟡 INICIO _markAsPaid");
+      print("➡ installmentId: $installmentId");
+      print("➡ amount: $amount");
+      print("➡ _collectorId: $_collectorId");
 
-      // Diálogo estilizado para seleção de pagamento
+      print("🟡 Pegando localização...");
+      final pos = await _getCurrentLocation();
+      print("➡ latitude: ${pos.latitude}");
+      print("➡ longitude: ${pos.longitude}");
+
+      print("🟡 Abrindo dialog de pagamento...");
       final paymentMethod = await showDialog<String>(
         context: context,
         builder: (_) => Dialog(
@@ -1303,11 +1312,21 @@ class _CollectorScreenState extends State<CollectorScreen> {
         ),
       );
 
-      if (paymentMethod == null) return;
+      print("➡ paymentMethod: $paymentMethod");
+
+      if (paymentMethod == null) {
+        print("⚠️ Usuário cancelou o dialog");
+        return;
+      }
 
       if (paymentMethod == "PIX") {
-        final qrImage = await CollectorService().getPixQrCode(installmentId);
+        print("🟢 FLOW PIX");
 
+        print("🟡 Gerando QR Code...");
+        final qrImage = await CollectorService().getPixQrCode(installmentId);
+        print("✅ QR Code gerado");
+
+        print("🟡 Abrindo dialog de confirmação PIX...");
         final confirmed = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
@@ -1345,17 +1364,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.green.shade300),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                     child: Image.memory(qrImage, width: 200, height: 200),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Escaneie o QR Code para pagar\nApós confirmação, toque em 'Confirmar'",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -1363,28 +1372,14 @@ class _CollectorScreenState extends State<CollectorScreen> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context, false),
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(color: Colors.grey.shade400),
-                          ),
                           child: const Text("Cancelar"),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.check_circle),
-                          label: const Text("Confirmar"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
+                        child: ElevatedButton(
                           onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Confirmar"),
                         ),
                       ),
                     ],
@@ -1395,6 +1390,9 @@ class _CollectorScreenState extends State<CollectorScreen> {
           ),
         );
 
+        print("➡ PIX confirmado: $confirmed");
+
+        print("🟡 Chamando collectInstallment (PIX sem amount)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
@@ -1402,8 +1400,10 @@ class _CollectorScreenState extends State<CollectorScreen> {
           latitude: pos.latitude,
           longitude: pos.longitude,
         );
+        print("✅ collectInstallment 1 OK");
 
         if (confirmed == true) {
+          print("🟡 Chamando collectInstallment (PIX confirmado)");
           await CollectorService().collectInstallment(
             collectorId: _collectorId!,
             installmentId: installmentId,
@@ -1413,16 +1413,29 @@ class _CollectorScreenState extends State<CollectorScreen> {
             longitude: pos.longitude,
             note: "PIX confirmado manualmente",
           );
+          print("✅ collectInstallment 2 OK");
         }
       } else if (paymentMethod == "CASH") {
-        final cashAmount = await _askCashAmount();
-        if (cashAmount == null) return;
+        print("🟢 FLOW CASH");
+        print("➡ collectorId: $_collectorId");
 
+        print("🟡 Perguntando valor em dinheiro...");
+        final cashAmount = await _askCashAmount(amount);
+        print("➡ cashAmount: $cashAmount");
+
+        if (cashAmount == null) {
+          print("⚠️ Usuário cancelou valor");
+          return;
+        }
+
+        print("🟡 Chamando paySale...");
         await CollectorService().paySale(
           installmentId: installmentId,
           amount: cashAmount,
         );
+        print("✅ paySale OK");
 
+        print("🟡 Chamando collectInstallment (CASH)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
@@ -1431,8 +1444,13 @@ class _CollectorScreenState extends State<CollectorScreen> {
           latitude: pos.latitude,
           longitude: pos.longitude,
           note: "Pago em dinheiro",
+          requiresPaySale: true,
         );
+        print("✅ collectInstallment CASH OK");
       } else {
+        print("🟢 FLOW OUTROS ($paymentMethod)");
+
+        print("🟡 Chamando collectInstallment (OUTROS)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
@@ -1442,21 +1460,23 @@ class _CollectorScreenState extends State<CollectorScreen> {
           longitude: pos.longitude,
           note: "Pagamento realizado com sucesso",
         );
+        print("✅ collectInstallment OUTROS OK");
       }
 
+      print("🟡 Mostrando sucesso");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Pagamento registrado com sucesso! ✅"),
           backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
         ),
       );
 
+      print("🟡 Atualizando lista...");
       await _fetchCollectorSales();
+      print("✅ Finalizou tudo");
     } catch (e) {
+      print("💥 ERRO NO _markAsPaid: $e");
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao registrar pagamento: $e"),
@@ -1466,44 +1486,169 @@ class _CollectorScreenState extends State<CollectorScreen> {
     }
   }
 
-  Future<double?> _askCashAmount() async {
+  Future<double?> _askCashAmount(double maxValue) async {
     final TextEditingController controller = TextEditingController();
+    final currencyFormat = NumberFormat.currency(
+      locale: 'pt_BR',
+      symbol: 'R\$',
+    );
+
+    String? errorText;
 
     return await showDialog<double>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Valor recebido"),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            prefixText: "R\$ ",
-            hintText: "Ex: 50.00",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final double? value = double.tryParse(
-                controller.text.replaceAll(',', '.'),
-              );
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            double? value;
 
-              if (value == null || value <= 0) {
-                // Se quiser, dá pra mostrar um erro aqui
-                return;
-              }
+            try {
+              value = currencyFormat.parse(controller.text) as double;
+            } catch (_) {
+              value = null;
+            }
 
-              Navigator.pop(context, value);
-            },
-            child: const Text("Confirmar"),
-          ),
-        ],
-      ),
+            bool isValid = value != null && value > 0 && value <= maxValue;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.attach_money, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text(
+                          "Receber pagamento",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Valor máximo",
+                            style: TextStyle(fontSize: 13),
+                          ),
+                          Text(
+                            currencyFormat.format(maxValue),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: "R\$ 0,00",
+                        errorText: errorText,
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onChanged: (text) {
+                        // 🔥 aplica máscara
+                        String digits = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+                        double number =
+                            double.parse(digits.isEmpty ? '0' : digits) / 100;
+
+                        String newText = currencyFormat.format(number);
+
+                        controller.value = TextEditingValue(
+                          text: newText,
+                          selection: TextSelection.collapsed(
+                            offset: newText.length,
+                          ),
+                        );
+
+                        setState(() {
+                          final v = number;
+
+                          if (v <= 0) {
+                            errorText = "Informe um valor válido";
+                          } else if (v > maxValue) {
+                            errorText = "Maior que o permitido";
+                          } else {
+                            errorText = null;
+                          }
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text("Cancelar"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isValid
+                                ? () => Navigator.pop(context, value)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text("Confirmar"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

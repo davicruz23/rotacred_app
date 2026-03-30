@@ -5,6 +5,8 @@ import 'package:isar/isar.dart';
 import 'package:rotacred_app/database/entities/inspector_approve_local.dart';
 import 'package:rotacred_app/database/entities/inspector_pre_sale_local.dart';
 import 'package:rotacred_app/database/entities/inspector_reject_local.dart';
+import 'package:rotacred_app/database/entities/pending_payment_local.dart';
+import 'package:rotacred_app/database/entities/sale_return_local.dart';
 import 'package:rotacred_app/model/address.dart';
 import 'package:rotacred_app/model/charging.dart';
 import 'package:rotacred_app/model/client.dart';
@@ -40,7 +42,6 @@ class SyncService {
     return result != ConnectivityResult.none;
   }
 
-  /// sincroniza todas as pré-vendas offline
   Future<void> syncPreSales() async {
     print("Sync iniciado de Pré-Vendas");
 
@@ -257,9 +258,153 @@ class SyncService {
     }
   }
 
+  Future<void> syncPendingPayments() async {
+    final isar = DatabaseService.isar;
+    final online = await _isOnline();
+
+    if (!online) {
+      print("🔴 Sem internet");
+      return;
+    }
+
+    final actions = await isar.pendingPayments
+        .where()
+        .sortByCreatedAt()
+        .findAll();
+
+    print("🟡 Pendentes: ${actions.length}");
+
+    for (final action in actions) {
+      try {
+        final headers = await _getHeaders();
+
+        print("➡ Processando ID: ${action.id}");
+
+        // 🔥 1. PAY
+        if (action.requiresPaySale && !action.paySent) {
+          print("🟡 Enviando PAY");
+
+          final payUrl = Uri.parse(
+            '$baseUrl/collector/${action.installmentId}/pay?amount=${action.amount!.toStringAsFixed(2)}',
+          );
+
+          final payResponse = await http.put(payUrl, headers: headers);
+
+          print("⬅ PAY STATUS: ${payResponse.statusCode}");
+
+          if (payResponse.statusCode != 200) {
+            print("❌ Erro no PAY");
+            break;
+          }
+
+          await isar.writeTxn(() async {
+            action.paySent = true;
+            await isar.pendingPayments.put(action);
+          });
+        }
+
+        // 🔥 2. COLLECT
+        print("🟡 Enviando COLLECT");
+
+        final collectUrl = Uri.parse(
+          '$baseUrl/collector/${action.collectorId}/installment/${action.installmentId}/collect',
+        );
+
+        final payload = {
+          if (action.amount != null) 'amount': action.amount,
+          if (action.paymentMethod != null)
+            'paymentMethod': action.paymentMethod,
+          if (action.latitude != null) 'latitude': action.latitude,
+          if (action.longitude != null) 'longitude': action.longitude,
+          if (action.note != null) 'note': action.note,
+          if (action.newDueDate != null)
+            'newDueDate': action.newDueDate!.toIso8601String(),
+        };
+
+        final collectResponse = await http.put(
+          collectUrl,
+          headers: headers,
+          body: jsonEncode(payload),
+        );
+
+        print("⬅ COLLECT STATUS: ${collectResponse.statusCode}");
+
+        if (collectResponse.statusCode != 200) {
+          print("❌ Erro no COLLECT");
+          break;
+        }
+
+        // ✅ REMOVE
+        await isar.writeTxn(() async {
+          await isar.pendingPayments.delete(action.id);
+        });
+
+        print("✅ Finalizado ID: ${action.id}");
+      } catch (e) {
+        print("💥 Erro no sync: $e");
+        break;
+      }
+    }
+  }
+
+  Future<void> syncSaleReturns() async {
+    final isar = DatabaseService.isar;
+    final online = await _isOnline();
+
+    if (!online) return;
+
+    final list = await isar.saleReturnLocals
+        .where()
+        .sortByCreatedAt()
+        .findAll();
+
+    print("🟡 SaleReturns pendentes: ${list.length}");
+
+    for (final item in list) {
+      try {
+        final headers = await _getHeaders();
+
+        final itemsDecoded = item.itemsJson.map((e) => jsonDecode(e)).toList();
+
+        final body = {
+          "items": itemsDecoded,
+          "status": item.status,
+          "description": item.description ?? "",
+        };
+
+        final url = '$baseUrl/sale-return/sales/${item.saleId}/returns';
+
+        final response = await http.post(
+          Uri.parse(url),
+          headers: {...headers, "Content-Type": "application/json"},
+          body: jsonEncode(body),
+        );
+
+        print("⬅ STATUS: ${response.statusCode}");
+
+        if (response.statusCode != 200 && response.statusCode != 201) {
+          print("❌ erro, abortando sync");
+          break;
+        }
+
+        // ✅ REMOVE
+        await isar.writeTxn(() async {
+          await isar.saleReturnLocals.delete(item.id);
+        });
+
+        print("✅ sincronizado ID: ${item.id}");
+      } catch (e) {
+        print("💥 erro sync saleReturn: $e");
+        break;
+      }
+    }
+  }
+
   Future<void> syncAll() async {
     await syncPreSales();
     await syncInspectorApprovals();
     await syncInspectorRejects();
+    await syncPendingPayments();
+    await syncSaleReturns();
   }
 }
