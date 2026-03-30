@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:rotacred_app/utils/sync_notifier.dart';
 import '../../model/dto/sale_collector_dto.dart';
 import '../../services/collector_service.dart';
 import '../../model/user.dart';
@@ -22,11 +23,26 @@ class _CollectorScreenState extends State<CollectorScreen> {
   bool _rotating = false;
   bool _refreshing = false;
   final Map<int, TextEditingController> controllers = {};
+  late VoidCallback _syncListener;
 
   @override
   void initState() {
     super.initState();
+
     _fetchCollectorSales();
+
+    _syncListener = () {
+      print("🔄 Sync finalizada → recarregando tela");
+      _fetchCollectorSales();
+    };
+
+    syncNotifier.addListener(_syncListener);
+  }
+
+  @override
+  void dispose() {
+    syncNotifier.removeListener(_syncListener);
+    super.dispose();
   }
 
   @override
@@ -596,29 +612,29 @@ class _CollectorScreenState extends State<CollectorScreen> {
     );
   }
 
-  Widget _buildProblemOption(
-    String title,
-    int status,
-    SaleCollectorDTO sale,
-    TextEditingController descController,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          Navigator.pop(context);
-          _showReturnItemsDialog(sale, status, descController.text);
-        },
-      ),
-    );
-  }
+  // Widget _buildProblemOption(
+  //   String title,
+  //   int status,
+  //   SaleCollectorDTO sale,
+  //   TextEditingController descController,
+  // ) {
+  //   return Container(
+  //     margin: const EdgeInsets.only(bottom: 8),
+  //     decoration: BoxDecoration(
+  //       borderRadius: BorderRadius.circular(10),
+  //       border: Border.all(color: Colors.grey.shade300),
+  //     ),
+  //     child: ListTile(
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  //       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+  //       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+  //       onTap: () {
+  //         Navigator.pop(context);
+  //         _showReturnItemsDialog(sale, status, descController.text);
+  //       },
+  //     ),
+  //   );
+  // }
 
   void _showReturnItemsDialog(
     SaleCollectorDTO sale,

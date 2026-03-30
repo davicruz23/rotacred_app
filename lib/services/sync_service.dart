@@ -13,6 +13,7 @@ import 'package:rotacred_app/model/client.dart';
 import 'package:rotacred_app/model/dto/seller_dto.dart';
 import 'package:rotacred_app/model/pre_sale.dart';
 import 'package:rotacred_app/model/pre_sale_item.dart';
+import '../utils/sync_notifier.dart';
 
 import '../database/database_service.dart';
 import '../database/entities/pre_sale_local.dart';
@@ -39,7 +40,7 @@ class SyncService {
 
   Future<bool> _isOnline() async {
     final result = await Connectivity().checkConnectivity();
-    return result != ConnectivityResult.none;
+    return result.any((r) => r != ConnectivityResult.none);
   }
 
   Future<void> syncPreSales() async {
@@ -197,8 +198,6 @@ class SyncService {
                 await isar.preSaleItemLocals.delete(i.id);
               }
             });
-
-            print("✅ Approve ${item.id} sincronizado e removido");
           }
         } catch (e) {
           print("Erro approve ${item.id}: $e");
@@ -233,10 +232,8 @@ class SyncService {
 
           if (response.statusCode == 200) {
             await isar.writeTxn(() async {
-              // 🔥 remove da fila de sync
               await isar.inspectorRejectLocals.delete(item.id);
 
-              // 🔥 remove a pre-sale local
               final local = await isar.inspectorPreSaleLocals
                   .filter()
                   .serverIdEqualTo(item.preSaleId)
@@ -246,12 +243,8 @@ class SyncService {
                 await isar.inspectorPreSaleLocals.delete(local.id);
               }
             });
-
-            print("❌ Reject ${item.id} sincronizado e removido");
           }
-        } catch (e) {
-          print("Erro reject ${item.id}: $e");
-        }
+        } catch (e) {}
       }
     } finally {
       _isSyncingRejects = false;
@@ -263,7 +256,6 @@ class SyncService {
     final online = await _isOnline();
 
     if (!online) {
-      print("🔴 Sem internet");
       return;
     }
 
@@ -272,22 +264,10 @@ class SyncService {
         .sortByCreatedAt()
         .findAll();
 
-    print("🟡 Pendentes: ${actions.length}");
-
     for (final action in actions) {
       try {
         final headers = await _getHeaders();
 
-        print("======================================");
-        print("➡ Processando ID: ${action.id}");
-        print("➡ collectorId: ${action.collectorId}");
-        print("➡ installmentId: ${action.installmentId}");
-        print("➡ amount: ${action.amount}");
-        print("➡ paymentMethod: ${action.paymentMethod}");
-        print("➡ paySent: ${action.paySent}");
-        print("======================================");
-
-        // 🔥 ENVIAR COLLECT
         final collectUrl = Uri.parse(
           '$baseUrl/collector/${action.collectorId}/installment/${action.installmentId}/collect',
         );
@@ -303,29 +283,21 @@ class SyncService {
             'newDueDate': action.newDueDate!.toIso8601String(),
         };
 
-        print("🔥 PAYLOAD FINAL: ${jsonEncode(payload)}");
-
         final collectResponse = await http.put(
           collectUrl,
           headers: {...headers, "Content-Type": "application/json"},
           body: jsonEncode(payload),
         );
 
-        print("⬅ COLLECT STATUS: ${collectResponse.statusCode}");
-
         if (collectResponse.statusCode != 200) {
-          print("❌ Erro no COLLECT");
           break;
         }
 
-        // ✅ REMOVER DO ISAR
         await isar.writeTxn(() async {
           await isar.pendingPayments.delete(action.id);
         });
-
-        print("✅ Finalizado ID: ${action.id}");
+        syncNotifier.value++;
       } catch (e) {
-        print("💥 Erro no sync: $e");
         break;
       }
     }
@@ -341,8 +313,6 @@ class SyncService {
         .where()
         .sortByCreatedAt()
         .findAll();
-
-    print("🟡 SaleReturns pendentes: ${list.length}");
 
     for (final item in list) {
       try {
@@ -364,10 +334,7 @@ class SyncService {
           body: jsonEncode(body),
         );
 
-        print("⬅ STATUS: ${response.statusCode}");
-
         if (response.statusCode != 200 && response.statusCode != 201) {
-          print("❌ erro, abortando sync");
           break;
         }
 
@@ -375,10 +342,8 @@ class SyncService {
         await isar.writeTxn(() async {
           await isar.saleReturnLocals.delete(item.id);
         });
-
-        print("✅ sincronizado ID: ${item.id}");
+        syncNotifier.value++;
       } catch (e) {
-        print("💥 erro sync saleReturn: $e");
         break;
       }
     }
