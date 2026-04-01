@@ -88,52 +88,9 @@ class InspectorService {
   Future<List<PreSale>> getPendingPreSales(int inspectorId) async {
     final isar = DatabaseService.isar;
 
-    // 🔥 1. SINCRONIZA APROVAÇÕES LOCAIS
-    final pendingApprovals = await isar.inspectorApproveLocals
-        .where()
-        .findAll();
-
-    for (final item in pendingApprovals) {
-      try {
-        final headers = await _getHeaders();
-
-        final response = await http.post(
-          Uri.parse("$baseUrl/inspector/pre-sales/${item.preSaleId}/approve"),
-          headers: headers,
-          body: jsonEncode({
-            "inspectorId": item.inspectorId,
-            "paymentMethod": item.paymentMethod,
-            "installments": item.installments,
-            "cashPaid": item.cashPaid ?? 0,
-            "latitude": item.latitude,
-            "longitude": item.longitude,
-          }),
-        );
-
-        if (response.statusCode == 200) {
-          await isar.writeTxn(() async {
-            // remove fila de sync
-            await isar.inspectorApproveLocals.delete(item.id);
-
-            // 🔥 REMOVE DO BANCO (COMO VOCÊ DEFINIU)
-            final local = await isar.inspectorPreSaleLocals
-                .filter()
-                .serverIdEqualTo(item.preSaleId)
-                .and()
-                .inspectorIdEqualTo(inspectorId)
-                .findFirst();
-
-            if (local != null) {
-              await isar.inspectorPreSaleLocals.delete(local.id);
-            }
-          });
-        }
-      } catch (_) {}
-    }
-
     final online = await isOnline();
 
-    // 🔥 2. ONLINE → BUSCA DO SERVIDOR
+    // 🔥 1. ONLINE → BUSCA DO SERVIDOR
     if (online) {
       final headers = await _getHeaders();
       final response = await http.get(
@@ -174,7 +131,7 @@ class InspectorService {
               inspectorId,
             );
 
-            local.status = "PENDENTE"; // 🔥 GARANTE STATUS CORRETO
+            local.status = "PENDENTE";
 
             if (existing != null) {
               local.id = existing.id;
@@ -188,12 +145,12 @@ class InspectorService {
       }
     }
 
-    // 🔥 3. OFFLINE → FILTRA APENAS PENDENTES
+    // 🔥 2. OFFLINE → FILTRA APENAS PENDENTES
     final localList = await isar.inspectorPreSaleLocals
         .filter()
         .inspectorIdEqualTo(inspectorId)
         .and()
-        .statusEqualTo("PENDENTE") // 🔥 ESSENCIAL
+        .statusEqualTo("PENDENTE")
         .findAll();
 
     return localList.map((local) {

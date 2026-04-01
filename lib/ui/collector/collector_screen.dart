@@ -32,7 +32,6 @@ class _CollectorScreenState extends State<CollectorScreen> {
     _fetchCollectorSales();
 
     _syncListener = () {
-      print("🔄 Sync finalizada → recarregando tela");
       _fetchCollectorSales();
     };
 
@@ -259,7 +258,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 6,
-      shadowColor: Colors.blue.withOpacity(0.2),
+      shadowColor: Colors.blue.withValues(alpha: 0.2),
       margin: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
       child: Container(
         decoration: BoxDecoration(
@@ -318,7 +317,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: Colors.blue.shade50.withOpacity(0.5),
+                color: Colors.blue.shade50.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(10),
@@ -408,7 +407,12 @@ class _CollectorScreenState extends State<CollectorScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color.fromARGB(255, 87, 85, 84).withOpacity(0.25),
+              color: const Color.fromARGB(
+                255,
+                87,
+                85,
+                84,
+              ).withValues(alpha: 0.25),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -919,10 +923,14 @@ class _CollectorScreenState extends State<CollectorScreen> {
 
       await _fetchCollectorSales();
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Enviado com sucesso ✅")));
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Erro: $e")));
@@ -1224,6 +1232,7 @@ class _CollectorScreenState extends State<CollectorScreen> {
         _salesByCity = salesByCity;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao buscar vendas: $e"),
@@ -1263,17 +1272,9 @@ class _CollectorScreenState extends State<CollectorScreen> {
 
   Future<void> _markAsPaid(int installmentId, double amount) async {
     try {
-      print("🟡 INICIO _markAsPaid");
-      print("➡ installmentId: $installmentId");
-      print("➡ amount: $amount");
-      print("➡ _collectorId: $_collectorId");
-
-      print("🟡 Pegando localização...");
       final pos = await _getCurrentLocation();
-      print("➡ latitude: ${pos.latitude}");
-      print("➡ longitude: ${pos.longitude}");
+      if (!mounted) return;
 
-      print("🟡 Abrindo dialog de pagamento...");
       final paymentMethod = await showDialog<String>(
         context: context,
         builder: (_) => Dialog(
@@ -1328,124 +1329,157 @@ class _CollectorScreenState extends State<CollectorScreen> {
         ),
       );
 
-      print("➡ paymentMethod: $paymentMethod");
-
       if (paymentMethod == null) {
-        print("⚠️ Usuário cancelou o dialog");
         return;
       }
 
       if (paymentMethod == "PIX") {
-        print("🟢 FLOW PIX");
-
-        print("🟡 Gerando QR Code...");
         final qrImage = await CollectorService().getPixQrCode(installmentId);
-        print("✅ QR Code gerado");
 
-        print("🟡 Abrindo dialog de confirmação PIX...");
+        final TextEditingController controller = TextEditingController();
+        final currencyFormat = NumberFormat.currency(
+          locale: 'pt_BR',
+          symbol: 'R\$',
+        );
+
+        double? pixValue;
+        String? errorText;
+        if (!mounted) return;
+
         final confirmed = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (_) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green.shade50, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.qr_code_scanner,
-                    size: 48,
-                    color: Colors.green,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Pagamento via PIX",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green.shade50, Colors.white],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.qr_code_scanner,
+                          size: 48,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Pagamento via PIX",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Image.memory(qrImage, width: 200, height: 200),
+                        const SizedBox(height: 16),
+
+                        TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: "R\$ 0,00",
+                            errorText: errorText,
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onChanged: (text) {
+                            String digits = text.replaceAll(
+                              RegExp(r'[^0-9]'),
+                              '',
+                            );
+
+                            double number =
+                                double.parse(digits.isEmpty ? '0' : digits) /
+                                100;
+
+                            String newText = currencyFormat.format(number);
+
+                            controller.value = TextEditingValue(
+                              text: newText,
+                              selection: TextSelection.collapsed(
+                                offset: newText.length,
+                              ),
+                            );
+
+                            setState(() {
+                              pixValue = number;
+
+                              if (number <= 0) {
+                                errorText = "Informe um valor válido";
+                              } else if (number > amount) {
+                                errorText = "Maior que o permitido";
+                              } else {
+                                errorText = null;
+                              }
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Cancelar"),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed:
+                                    (pixValue != null && errorText == null)
+                                    ? () => Navigator.pop(context, true)
+                                    : null,
+                                child: const Text("Confirmar"),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Image.memory(qrImage, width: 200, height: 200),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text("Cancelar"),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text("Confirmar"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+                );
+              },
+            );
+          },
         );
 
-        print("➡ PIX confirmado: $confirmed");
+        if (confirmed != true || pixValue == null) return;
 
-        print("🟡 Chamando collectInstallment (PIX sem amount)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
-          note: "Pago via PIX",
+          amount: pixValue,
+          paymentMethod: paymentMethod,
           latitude: pos.latitude,
           longitude: pos.longitude,
+          note: "PIX confirmado manualmente",
         );
-        print("✅ collectInstallment 1 OK");
-
-        if (confirmed == true) {
-          print("🟡 Chamando collectInstallment (PIX confirmado)");
-          await CollectorService().collectInstallment(
-            collectorId: _collectorId!,
-            installmentId: installmentId,
-            amount: amount,
-            paymentMethod: paymentMethod,
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            note: "PIX confirmado manualmente",
-          );
-          print("✅ collectInstallment 2 OK");
-        }
       } else if (paymentMethod == "CASH") {
-        print("🟢 FLOW CASH");
-        print("➡ collectorId: $_collectorId");
-
-        print("🟡 Perguntando valor em dinheiro...");
         final cashAmount = await _askCashAmount(amount);
-        print("➡ cashAmount: $cashAmount");
 
-        if (cashAmount == null) {
-          print("⚠️ Usuário cancelou valor");
-          return;
-        }
+        if (cashAmount == null) return;
 
-        // ❌ REMOVE paySale
-        print("🟡 Chamando collectInstallment (CASH)");
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
@@ -1455,24 +1489,22 @@ class _CollectorScreenState extends State<CollectorScreen> {
           longitude: pos.longitude,
           note: "Pago em dinheiro",
         );
-        print("✅ collectInstallment CASH OK");
       } else {
-        print("🟢 FLOW OUTROS ($paymentMethod)");
+        final otherAmount = await _askCashAmount(amount);
 
-        print("🟡 Chamando collectInstallment (OUTROS)");
+        if (otherAmount == null) return;
+
         await CollectorService().collectInstallment(
           collectorId: _collectorId!,
           installmentId: installmentId,
-          amount: amount,
+          amount: otherAmount,
           paymentMethod: paymentMethod,
           latitude: pos.latitude,
           longitude: pos.longitude,
           note: "Pagamento realizado com sucesso",
         );
-        print("✅ collectInstallment OUTROS OK");
       }
-
-      print("🟡 Mostrando sucesso");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Pagamento registrado com sucesso! ✅"),
@@ -1480,12 +1512,9 @@ class _CollectorScreenState extends State<CollectorScreen> {
         ),
       );
 
-      print("🟡 Atualizando lista...");
       await _fetchCollectorSales();
-      print("✅ Finalizou tudo");
     } catch (e) {
-      print("💥 ERRO NO _markAsPaid: $e");
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao registrar pagamento: $e"),
@@ -1692,6 +1721,8 @@ class _CollectorScreenState extends State<CollectorScreen> {
         longitude: pos.longitude,
       );
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Tentativa registrada: $status ✅"),
@@ -1700,6 +1731,8 @@ class _CollectorScreenState extends State<CollectorScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao registrar tentativa: $e"),

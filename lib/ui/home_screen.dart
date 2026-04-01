@@ -32,13 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       if (widget.user.position == 'ROLE_VENDEDOR') {
         await _sellerService.getSellerByUserId(widget.user.serverId);
-        print("✔ Vendedor sincronizado com sucesso");
       } else if (widget.user.position == 'ROLE_FISCAL') {
         await _inspectorService.getPendingPreSales(widget.user.serverId);
-        print("✔ Fiscal sincronizado com sucesso");
       } else if (widget.user.position == 'ROLE_COBRADOR') {
         await _collectorService.getCollectorByUserId(widget.user.serverId);
-        print("✔ Cobrador sincronizado com sucesso");
       }
     } catch (e) {
       print("Não foi possível sincronizar: $e");
