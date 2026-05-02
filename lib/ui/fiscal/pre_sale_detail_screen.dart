@@ -692,6 +692,7 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                                 ? null
                                 : () async {
                                     setState(() => _isApproving = true);
+
                                     try {
                                       final pos = await _getCurrentLocation();
 
@@ -712,18 +713,24 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                                         longitude: pos.longitude,
                                       );
 
-                                      Navigator.pop(context);
+                                      if (!context.mounted) return;
+
+                                      Navigator.of(context).pop();
+
+                                      if (!mounted) return;
 
                                       ScaffoldMessenger.of(
-                                        context,
+                                        this.context,
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text("Pré-venda aprovada ✅"),
                                         ),
                                       );
 
-                                      Navigator.pop(context, true);
+                                      Navigator.of(this.context).pop(true);
                                     } catch (e) {
+                                      if (!context.mounted) return;
+
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -732,7 +739,9 @@ class _PreSaleDetailScreenState extends State<PreSaleDetailScreen> {
                                         ),
                                       );
                                     } finally {
-                                      setState(() => _isApproving = false);
+                                      if (context.mounted) {
+                                        setState(() => _isApproving = false);
+                                      }
                                     }
                                   },
                             child: _isApproving

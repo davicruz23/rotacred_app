@@ -206,21 +206,22 @@ class InspectorService {
       try {
         final headers = await _getHeaders();
 
-        final response = await http.post(
-          Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/approve"),
-          headers: headers,
-          body: jsonEncode({
-            "inspectorId": inspectorId,
-            "paymentMethod": paymentMethod,
-            "installments": installments,
-            "cashPaid": cashPaid ?? 0,
-            "latitude": latitude,
-            "longitude": longitude,
-          }),
-        );
+        final response = await http
+            .post(
+              Uri.parse("$baseUrl/inspector/pre-sales/$preSaleId/approve"),
+              headers: headers,
+              body: jsonEncode({
+                "inspectorId": inspectorId,
+                "paymentMethod": paymentMethod,
+                "installments": installments,
+                "cashPaid": cashPaid ?? 0,
+                "latitude": latitude,
+                "longitude": longitude,
+              }),
+            )
+            .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
-          // 🔥 ONLINE → já pode remover direto
           await isar.writeTxn(() async {
             final local = await isar.inspectorPreSaleLocals
                 .filter()
@@ -236,12 +237,16 @@ class InspectorService {
 
           return;
         }
+
+        throw Exception(
+          "Erro ao aprovar pré-venda. Status: ${response.statusCode}. ${response.body}",
+        );
       } catch (e) {
         print("Erro online approve: $e");
+        throw Exception("Não foi possível aprovar a pré-venda: $e");
       }
     }
 
-    // 🔥 OFFLINE → salvar fila + atualizar status
     final approve = InspectorApproveLocal()
       ..preSaleId = preSaleId
       ..inspectorId = inspectorId
@@ -253,10 +258,8 @@ class InspectorService {
       ..createdAt = DateTime.now();
 
     await isar.writeTxn(() async {
-      // salva fila de sync
       await isar.inspectorApproveLocals.put(approve);
 
-      // 🔥 AQUI ESTÁ O MAIS IMPORTANTE
       final local = await isar.inspectorPreSaleLocals
           .filter()
           .serverIdEqualTo(preSaleId)
@@ -265,7 +268,7 @@ class InspectorService {
           .findFirst();
 
       if (local != null) {
-        local.status = "APROVADO"; // 🔥 MUDA STATUS
+        local.status = "APROVADO";
         await isar.inspectorPreSaleLocals.put(local);
       }
     });
