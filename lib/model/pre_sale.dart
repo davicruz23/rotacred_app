@@ -14,7 +14,6 @@ class PreSale {
   final int? chargingId;
   final double? totalPreSale;
   final String uuidPreSale;
-  
 
   PreSale({
     this.id,
@@ -50,16 +49,19 @@ class PreSale {
       status: json['status'],
       chargingId: json['chargingId'],
       totalPreSale: json['totalPreSale'],
-      uuidPreSale: json['uuidPreSale'] ?? ''
+      uuidPreSale: json['uuidPreSale'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
+    final bool existingClient = client.id != null;
+
     return {
       'id': id ?? 0,
-      'preSaleDate': preSaleDate.toIso8601String(), // mantém ISO no envio
+      'clientId': existingClient ? client.id : null,
+      'preSaleDate': preSaleDate.toIso8601String(),
       'sellerId': seller.idSeller,
-      'client': client.toJson(),
+      'client': existingClient ? null : client.toJson(),
       'chargingId': chargingId,
       'products': items
           .map((i) => {'productId': i.productId, 'quantity': i.quantity})

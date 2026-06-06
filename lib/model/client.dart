@@ -18,10 +18,19 @@ class Client {
   factory Client.fromJson(Map<String, dynamic> json) {
     return Client(
       id: json['id'],
-      name: json['name'],
-      cpf: json['cpf'],
-      phone: json['phone'],
-      address: Address.fromJson(json['address']),
+      name: json['name'] ?? '',
+      cpf: json['cpf'] ?? '',
+      phone: json['phone'] ?? '',
+      address: json['address'] != null
+          ? Address.fromJson(json['address'])
+          : Address(
+              state: '',
+              city: '',
+              street: '',
+              number: '',
+              zipCode: '',
+              complement: '',
+            ),
     );
   }
 

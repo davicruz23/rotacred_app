@@ -140,24 +140,24 @@ class _ChargingProductsScreenState extends State<ChargingProductsScreen> {
       ),
       body: Column(
         children: [
-          if (totalSelectedQuantity > 0)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.shade200),
-              ),
-              child: Text(
-                'Itens selecionados: $totalSelectedQuantity',
-                style: TextStyle(
-                  color: Colors.green.shade800,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+          // if (totalSelectedQuantity > 0)
+          //   Container(
+          //     width: double.infinity,
+          //     margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          //     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          //     decoration: BoxDecoration(
+          //       color: Colors.green.shade50,
+          //       borderRadius: BorderRadius.circular(12),
+          //       border: Border.all(color: Colors.green.shade200),
+          //     ),
+          //     child: Text(
+          //       'Itens selecionados: $totalSelectedQuantity',
+          //       style: TextStyle(
+          //         color: Colors.green.shade800,
+          //         fontWeight: FontWeight.w600,
+          //       ),
+          //     ),
+          //   ),
           Expanded(
             child: _charging.chargingItems.isEmpty
                 ? Center(

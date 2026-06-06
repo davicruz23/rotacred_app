@@ -232,20 +232,20 @@ class _SellerScreenState extends State<SellerScreen> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '$totalItems item(ns) selecionado(s)',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+        // child: Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        //   decoration: BoxDecoration(
+        //     color: Colors.white.withValues(alpha: 0.18),
+        //     borderRadius: BorderRadius.circular(20),
+        //   ),
+        //   child: Text(
+        //     '$totalItems item(ns) selecionado(s)',
+        //     style: const TextStyle(
+        //       color: Colors.white,
+        //       fontWeight: FontWeight.w600,
+        //     ),
+        //   ),
+        // ),
       ),
     );
   }
