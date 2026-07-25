@@ -7,6 +7,7 @@ import '../../model/user.dart';
 import '../login_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import '../../services/location_service.dart';
 
 class CollectorScreen extends StatefulWidget {
   final User user;
@@ -25,10 +26,19 @@ class _CollectorScreenState extends State<CollectorScreen> {
   final Map<int, TextEditingController> controllers = {};
   late VoidCallback _syncListener;
 
+  late final LocationService _locationService;
+
+  bool _checkingLocation = true;
+  bool _locationEnabled = false;
+  String? _locationError;
+
   @override
   void initState() {
     super.initState();
 
+    _locationService = LocationService();
+
+    _initializeLocation();
     _fetchCollectorSales();
 
     _syncListener = () {
@@ -38,9 +48,72 @@ class _CollectorScreenState extends State<CollectorScreen> {
     syncNotifier.addListener(_syncListener);
   }
 
+  Future<void> _initializeLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        if (!mounted) return;
+
+        setState(() {
+          _checkingLocation = false;
+          _locationEnabled = false;
+          _locationError =
+              'Ative a localização do aparelho para utilizar o aplicativo.';
+        });
+
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+
+        setState(() {
+          _checkingLocation = false;
+          _locationEnabled = false;
+          _locationError = 'A permissão de localização é obrigatória.';
+        });
+
+        return;
+      }
+
+      await _locationService.startTracking(
+        userId: widget.user.serverId,
+        distanceFilter: 1,
+        onError: (error) {
+          debugPrint('Erro ao enviar localização: $error');
+        },
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _checkingLocation = false;
+        _locationEnabled = true;
+        _locationError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _checkingLocation = false;
+        _locationEnabled = false;
+        _locationError = error.toString();
+      });
+    }
+  }
+
   @override
   void dispose() {
     syncNotifier.removeListener(_syncListener);
+    _locationService.dispose();
     super.dispose();
   }
 
@@ -100,6 +173,48 @@ class _CollectorScreenState extends State<CollectorScreen> {
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
+    }
+
+    if (_checkingLocation) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (!_locationEnabled) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.location_off, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  _locationError ?? 'A localização é obrigatória.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    await Geolocator.openLocationSettings();
+                  },
+                  child: const Text('Ativar localização'),
+                ),
+                TextButton(
+                  onPressed: _initializeLocation,
+                  child: const Text('Tentar novamente'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await Geolocator.openAppSettings();
+                  },
+                  child: const Text('Abrir permissões'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(
